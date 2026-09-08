@@ -20,6 +20,7 @@ jobs:
             target: x86_64-pc-windows-msvc
 
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 

@@ -1,5 +1,14 @@
 //! End-to-end test of the chat path through the real command layer.
 //!
+//! Not run on Windows: the Tauri mock runtime cannot initialise inside a test
+//! binary there, because `tauri-build` only embeds the Common-Controls v6
+//! application manifest into binaries (`link-arg-bins`), and without it the
+//! runtime load fails with `STATUS_ENTRYPOINT_NOT_FOUND` (0xc0000139). See
+//! tauri-apps/tauri#11028. The equivalent coverage on Windows comes from the
+//! `bytepet-core` suite; the app itself is still built and bundled there.
+#![cfg(not(target_os = "windows"))]
+
+//!
 //! A local mock of the OpenAI-compatible `/chat/completions` endpoint replaces
 //! the model, so this runs hermetically in CI while still exercising the whole
 //! real path: `send_message` command -> persona/provider lookup -> HTTP

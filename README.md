@@ -1,5 +1,6 @@
 # 桌宠 · BytePet
 
+[![CI](https://github.com/cwwwwy/bytepet/actions/workflows/ci.yml/badge.svg)](https://github.com/cwwwwy/bytepet/actions/workflows/ci.yml)
 `https://github.com/cwwwwy/bytepet`
 
 一款用 Rust 开发的跨平台桌面宠物（Windows / macOS）。它兼容 **Codex 桌宠图集格式**，能直接使用你 `~/.codex/pets/` 里已有的宠物；同时可以接入 Claude、OpenAI、DeepSeek 等大模型，也能直接复用本机已登录的 `codex` / `claude` 命令行，并支持完全自定义人格。
