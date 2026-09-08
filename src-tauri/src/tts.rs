@@ -159,7 +159,7 @@ fn spawn_speaker(
         let wpm = (175.0 * rate).round() as i64;
         cmd.arg("-r").arg(wpm.to_string());
         cmd.arg(text);
-        return cmd.spawn();
+        cmd.spawn()
     }
 
     #[cfg(target_os = "windows")]
@@ -177,9 +177,9 @@ fn spawn_speaker(
              $s.Rate = {rate_arg}; {select} $s.Speak([IO.File]::ReadAllText('{}'))",
             path.display()
         );
-        return std::process::Command::new("powershell")
+        std::process::Command::new("powershell")
             .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-            .spawn();
+            .spawn()
     }
 
     #[cfg(all(unix, not(target_os = "macos")))]

@@ -10,21 +10,16 @@ use crate::error::{Error, Result};
 /// Current config schema version. Bump when the shape changes incompatibly.
 pub const CONFIG_SCHEMA_VERSION: u32 = 1;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum ClickThroughMode {
     /// Per-pixel alpha hit testing (default).
+    #[default]
     Auto,
     /// The whole window rectangle is interactive.
     Rect,
     /// Fully click-through; interact through the tray or a hotkey.
     Passthrough,
-}
-
-impl Default for ClickThroughMode {
-    fn default() -> Self {
-        Self::Auto
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -282,10 +277,18 @@ mod tests {
     fn round_trips_and_is_atomic() {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("config.json");
-        let mut cfg = AppConfig::default();
-        cfg.active_pet = Some("zip".into());
-        cfg.pet.scale = 1.5;
-        cfg.ui.language = "en".into();
+        let cfg = AppConfig {
+            active_pet: Some("zip".into()),
+            pet: PetWindowConfig {
+                scale: 1.5,
+                ..PetWindowConfig::default()
+            },
+            ui: UiConfig {
+                language: "en".into(),
+                ..UiConfig::default()
+            },
+            ..AppConfig::default()
+        };
         cfg.save(&path).unwrap();
         assert!(!path.with_extension("json.tmp").exists());
         let back = AppConfig::load(&path).unwrap();

@@ -176,7 +176,7 @@ impl PetLibrary {
                 }
             }
         }
-        found.sort_by(|a, b| a.display_name.to_lowercase().cmp(&b.display_name.to_lowercase()));
+        found.sort_by_key(|p| p.display_name.to_lowercase());
         found
     }
 

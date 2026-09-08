@@ -62,7 +62,7 @@ pub fn start<R: Runtime>(app: AppHandle<R>) {
             let Some(win) = app.get_webview_window("pet") else {
                 continue;
             };
-            let Ok(monitor) = win.current_monitor().map(|m| m) else {
+            let Ok(monitor) = win.current_monitor() else {
                 continue;
             };
             let Some(monitor) = monitor else { continue };

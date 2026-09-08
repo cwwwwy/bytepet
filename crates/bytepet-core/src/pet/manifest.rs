@@ -252,7 +252,7 @@ impl PetManifest {
         if declared.width == 0 || declared.height == 0 {
             return Err(Error::manifest("frame width/height must be greater than zero"));
         }
-        if image_w % declared.width == 0 && image_h % declared.height == 0 {
+        if image_w.is_multiple_of(declared.width) && image_h.is_multiple_of(declared.height) {
             let inferred = FrameSpec {
                 width: declared.width,
                 height: declared.height,

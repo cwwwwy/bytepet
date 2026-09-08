@@ -50,7 +50,7 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             {
                 // No Dock icon: this is a background companion, not a document app.
-                let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
             Ok(())
         })
