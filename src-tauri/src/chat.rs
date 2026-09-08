@@ -8,7 +8,7 @@ use parking_lot::Mutex;
 use pet_core::chat::{run_turn, summarize_conversation, TurnContext};
 use pet_core::llm::{build_provider, ChatDelta, ChatProvider, ProviderConfig};
 use pet_core::memory::{MemoryConfig, MemoryStore};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
@@ -42,9 +42,9 @@ impl ChatManager {
     }
 
     /// Start a turn. Returns immediately; the reply streams via events.
-    pub fn send(
+    pub fn send<R: Runtime>(
         &self,
-        app: AppHandle,
+        app: AppHandle<R>,
         memory: Arc<MemoryStore>,
         conversation_id: String,
         text: String,
@@ -252,8 +252,8 @@ impl ChatManager {
     }
 }
 
-fn build_chat_provider(
-    app: &AppHandle,
+fn build_chat_provider<R: Runtime>(
+    app: &AppHandle<R>,
     cfg: &ProviderConfig,
 ) -> Result<Arc<dyn ChatProvider>, String> {
     let state = app

@@ -5,10 +5,10 @@ pub mod hit_test;
 pub mod pet_window;
 pub mod walk;
 
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 /// Show and focus the chat window.
-pub fn show_chat(app: &AppHandle) {
+pub fn show_chat<R: Runtime>(app: &AppHandle<R>) {
     tracing::debug!("showing chat window");
     if let Some(win) = app.get_webview_window("chat") {
         let _ = win.show();
@@ -18,13 +18,13 @@ pub fn show_chat(app: &AppHandle) {
 }
 
 /// Show the chat window and ask the frontend to switch to the settings tab.
-pub fn show_settings(app: &AppHandle) {
+pub fn show_settings<R: Runtime>(app: &AppHandle<R>) {
     show_chat(app);
     let _ = app.emit("ui://open-settings", ());
 }
 
 /// Toggle pet overlay visibility.
-pub fn toggle_pet(app: &AppHandle) {
+pub fn toggle_pet<R: Runtime>(app: &AppHandle<R>) {
     if let Some(win) = app.get_webview_window("pet") {
         match win.is_visible() {
             Ok(true) => {

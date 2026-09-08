@@ -8,13 +8,13 @@ use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
 use pet_core::pet::state::PetState;
-use tauri::{AppHandle, Manager, PhysicalPosition};
+use tauri::{AppHandle, Manager, PhysicalPosition, Runtime};
 
 const TICK: Duration = Duration::from_millis(16);
 
 /// Start the walk loop. It re-reads the active runtime each tick so switching
 /// pets never accumulates threads.
-pub fn start(app: AppHandle) {
+pub fn start<R: Runtime>(app: AppHandle<R>) {
     std::thread::spawn(move || {
         let mut last = Instant::now();
         let mut rest_until: Option<Instant> = None;
@@ -112,7 +112,11 @@ pub fn start(app: AppHandle) {
 
 /// Switch the passive base state and tell the renderer about the *visible*
 /// state (which may still be a higher-priority override).
-fn set_base(app: &tauri::AppHandle, runtime: &super::pet_window::PetRuntime, state: PetState) {
+fn set_base<R: Runtime>(
+    app: &tauri::AppHandle<R>,
+    runtime: &super::pet_window::PetRuntime,
+    state: PetState,
+) {
     use tauri::Emitter;
     let mut engine = runtime.engine.lock();
     if engine.base() == state {

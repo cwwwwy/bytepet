@@ -59,24 +59,12 @@ export function describeError(error: unknown): string {
   return String(error);
 }
 
-/**
- * The single argument-shape accommodation of this boundary.
- *
- * Tauri reads command arguments per parameter name. A Rust handler may be
- * written either as `fn cmd(args: PathArgs)` (payload `{ args: { path } }`) or
- * with flattened parameters (payload `{ path }`). This client sends **both**:
- * `{ ...args, args }`. Tauri ignores keys it does not read, so the same payload
- * satisfies either shape — and unlike a retry-on-error scheme it also covers
- * `Option<XArgs>` parameters, where a missing `args` key would silently
- * deserialize to `None` instead of failing.
- */
 export async function invokeCommand<T>(
   command: string,
   args?: Record<string, unknown>,
 ): Promise<IpcResult<T>> {
-  const payload = args ? { ...args, args } : undefined;
   try {
-    const value = await invoke<T>(command, payload);
+    const value = await invoke<T>(command, args);
     return ok(value);
   } catch (error) {
     return fail<T>(error);
@@ -174,7 +162,7 @@ export const ipc = {
   // `id` is sent alongside `providerId` so the command works whether the handler
   // declares `IdArgs { id }` or `{ providerId }`.
   hasApiKey: (providerId: string) =>
-    invokeCommand<boolean>("has_api_key", { providerId, id: providerId }),
+    invokeCommand<boolean>("has_api_key", { providerId }),
 
   // conversations ---------------------------------------------------------
   listConversations: (personaId?: string) =>
@@ -189,7 +177,7 @@ export const ipc = {
   // `id` is sent alongside `conversationId` so the command works whether the
   // handler declares `IdArgs { id }` or `{ conversationId }`.
   cancelMessage: (conversationId: string) =>
-    invokeCommand<void>("cancel_message", { conversationId, id: conversationId }),
+    invokeCommand<void>("cancel_message", { conversationId }),
 
   // memory ----------------------------------------------------------------
   listFacts: (personaId: string) => invokeCommand<MemoryFact[]>("list_facts", { personaId }),

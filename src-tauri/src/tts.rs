@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use parking_lot::Mutex;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Runtime};
 
 use crate::events::TTS_STATE;
 
@@ -43,9 +43,9 @@ impl Tts {
     }
 
     /// Speak `text`, stopping any current utterance.
-    pub fn speak(
+    pub fn speak<R: Runtime>(
         &self,
-        app: &AppHandle,
+        app: &AppHandle<R>,
         text: &str,
         voice: Option<String>,
         rate: f32,
@@ -98,7 +98,7 @@ impl Tts {
     }
 
     /// Stop playback immediately.
-    pub fn stop(&self, app: &AppHandle) {
+    pub fn stop<R: Runtime>(&self, app: &AppHandle<R>) {
         // Invalidate any watcher first.
         self.inner.generation.fetch_add(1, Ordering::SeqCst);
         if let Some(mut child) = self.inner.child.lock().take() {

@@ -16,11 +16,6 @@ const { describeError, invokeCommand, ipc, isOk, unwrapOr } = await import("./ip
 
 const settings = { schemaVersion: 1, activePet: null } as never;
 
-/** Every payload carries both the flattened and the `{ args }` shape. */
-function both(args: Record<string, unknown>): Record<string, unknown> {
-  return { ...args, args };
-}
-
 describe("invokeCommand", () => {
   beforeEach(() => {
     invoke.mockReset();
@@ -36,7 +31,7 @@ describe("invokeCommand", () => {
   it("passes the command name and argument object through", async () => {
     invoke.mockResolvedValueOnce(null);
     await ipc.validatePet("/tmp/pet");
-    expect(invoke).toHaveBeenCalledWith("validate_pet", both({ path: "/tmp/pet" }));
+    expect(invoke).toHaveBeenCalledWith("validate_pet", { path: "/tmp/pet" });
   });
 
   it("sends no arguments for no-arg commands", async () => {
@@ -48,16 +43,13 @@ describe("invokeCommand", () => {
   it("sends optional arguments when provided", async () => {
     invoke.mockResolvedValueOnce([]);
     await ipc.listConversations("persona-1");
-    expect(invoke).toHaveBeenCalledWith(
-      "list_conversations",
-      both({ personaId: "persona-1" }),
-    );
+    expect(invoke).toHaveBeenCalledWith("list_conversations", { personaId: "persona-1" });
   });
 
   it("wraps the settings payload", async () => {
     invoke.mockResolvedValueOnce(settings);
     await ipc.saveSettings(settings);
-    expect(invoke).toHaveBeenCalledWith("save_settings", both({ config: settings }));
+    expect(invoke).toHaveBeenCalledWith("save_settings", { config: settings });
   });
 
   it("surfaces string rejections as { ok: false, error }", async () => {
@@ -87,22 +79,16 @@ describe("invokeCommand", () => {
     expect(result).toEqual({ ok: false, error: "42" });
   });
 
-  it("passes both id aliases for cancel_message", async () => {
+  it("passes the conversation id for cancel_message", async () => {
     invoke.mockResolvedValueOnce(undefined);
     await ipc.cancelMessage("conv-1");
-    expect(invoke).toHaveBeenCalledWith(
-      "cancel_message",
-      both({ conversationId: "conv-1", id: "conv-1" }),
-    );
+    expect(invoke).toHaveBeenCalledWith("cancel_message", { conversationId: "conv-1" });
   });
 
-  it("passes both id aliases for has_api_key", async () => {
+  it("passes the provider id for has_api_key", async () => {
     invoke.mockResolvedValueOnce(true);
     await ipc.hasApiKey("provider-1");
-    expect(invoke).toHaveBeenCalledWith(
-      "has_api_key",
-      both({ providerId: "provider-1", id: "provider-1" }),
-    );
+    expect(invoke).toHaveBeenCalledWith("has_api_key", { providerId: "provider-1" });
   });
 });
 

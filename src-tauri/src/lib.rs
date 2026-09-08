@@ -1,10 +1,10 @@
 //! Desktop pet application shell: windows, tray, IPC command surface.
 
 mod agent_bridge;
-mod chat;
-mod commands;
-mod events;
-mod state;
+pub mod chat;
+pub mod commands;
+pub mod events;
+pub mod state;
 mod tray;
 mod tts;
 mod window;
@@ -31,6 +31,10 @@ pub fn run() {
             app.manage(state);
             tray::build(app.handle())?;
             window::pet_window::activate_active_pet(app.handle())?;
+            // Wry-specific background loops: hit testing needs the global cursor
+            // position, which the mock runtime does not provide.
+            window::hit_test::start(app.handle().clone());
+            window::walk::start(app.handle().clone());
             agent_bridge::start(app.handle().clone());
 
             // First run with no pet installed: open the chat window so the user

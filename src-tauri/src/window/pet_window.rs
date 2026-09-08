@@ -8,7 +8,7 @@ use parking_lot::Mutex;
 use pet_core::config::AppConfig;
 use pet_core::pet::state::{PetEngine, PetState};
 use pet_core::pet::{PetAtlas, PetEntry};
-use tauri::{AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition};
+use tauri::{AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, Runtime};
 
 use super::hit_test::HitState;
 
@@ -44,7 +44,7 @@ impl WalkController {
 
 /// Load a pet and make it the one on screen. Starts the hit-test and walk
 /// loops if they are not running yet.
-pub fn activate(app: &AppHandle, entry: &PetEntry) -> anyhow::Result<()> {
+pub fn activate<R: Runtime>(app: &AppHandle<R>, entry: &PetEntry) -> anyhow::Result<()> {
     let (atlas, warnings) = PetAtlas::open(&entry.dir, &entry.manifest)?;
     for warning in &warnings {
         tracing::warn!(pet = %entry.id, %warning, "pet atlas warning");
@@ -61,7 +61,7 @@ pub fn activate(app: &AppHandle, entry: &PetEntry) -> anyhow::Result<()> {
     });
     runtime.hit.set_atlas(atlas.mask.clone(), frame);
 
-    let (config, loops_started) = {
+    let config = {
         let state = app
             .try_state::<crate::state::AppState>()
             .ok_or_else(|| anyhow::anyhow!("app state is not initialized"))?;
@@ -71,14 +71,10 @@ pub fn activate(app: &AppHandle, entry: &PetEntry) -> anyhow::Result<()> {
             .store(state.config().pet.auto_walk.enabled, Ordering::Relaxed);
         runtime.hit.set_mode(state.config().pet.click_through);
         state.set_pet_runtime(runtime.clone());
-        (state.config(), state.loops_started.swap(true, Ordering::SeqCst))
+        state.config()
     };
 
     apply_config(app, &config, frame);
-    if !loops_started {
-        super::hit_test::start(app.clone());
-        super::walk::start(app.clone());
-    }
 
     let _ = app.emit(
         crate::events::PET_STATE,
@@ -95,7 +91,7 @@ pub fn activate(app: &AppHandle, entry: &PetEntry) -> anyhow::Result<()> {
 }
 
 /// Activate whichever pet the config selects, falling back to the first one.
-pub fn activate_active_pet(app: &AppHandle) -> anyhow::Result<()> {
+pub fn activate_active_pet<R: Runtime>(app: &AppHandle<R>) -> anyhow::Result<()> {
     let state = app
         .try_state::<crate::state::AppState>()
         .ok_or_else(|| anyhow::anyhow!("app state is not initialized"))?;
@@ -128,7 +124,7 @@ pub fn activate_active_pet(app: &AppHandle) -> anyhow::Result<()> {
 }
 
 /// Apply pet-window geometry and behaviour from config.
-pub fn apply_config(app: &AppHandle, config: &AppConfig, frame: pet_core::pet::FrameSpec) {
+pub fn apply_config<R: Runtime>(app: &AppHandle<R>, config: &AppConfig, frame: pet_core::pet::FrameSpec) {
     let Some(win) = app.get_webview_window("pet") else {
         return;
     };
@@ -155,7 +151,7 @@ pub fn apply_config(app: &AppHandle, config: &AppConfig, frame: pet_core::pet::F
 }
 
 /// Persist the current window position into the config.
-pub fn save_position(app: &AppHandle) {
+pub fn save_position<R: Runtime>(app: &AppHandle<R>) {
     let Some(win) = app.get_webview_window("pet") else {
         return;
     };
@@ -174,7 +170,7 @@ pub fn save_position(app: &AppHandle) {
 }
 
 /// Suspend hit testing while the user drags the pet.
-pub fn set_dragging(app: &AppHandle, dragging: bool) {
+pub fn set_dragging<R: Runtime>(app: &AppHandle<R>, dragging: bool) {
     if let Some(state) = app.try_state::<crate::state::AppState>() {
         if let Some(runtime) = state.pet_runtime() {
             runtime.hit.set_suspended(dragging);
@@ -188,8 +184,8 @@ pub fn set_dragging(app: &AppHandle, dragging: bool) {
 }
 
 /// Raise a transient pet state from the UI or agent events.
-pub fn raise_state(
-    app: &AppHandle,
+pub fn raise_state<R: Runtime>(
+    app: &AppHandle<R>,
     state: PetState,
     source: &str,
     message: Option<String>,
@@ -219,7 +215,7 @@ pub fn raise_state(
 }
 
 /// Clear overrides raised by one source (e.g. a cancelled chat turn).
-pub fn clear_source(app: &AppHandle, source: &str) {
+pub fn clear_source<R: Runtime>(app: &AppHandle<R>, source: &str) {
     let Some(app_state) = app.try_state::<crate::state::AppState>() else {
         return;
     };
@@ -247,7 +243,7 @@ pub fn clear_source(app: &AppHandle, source: &str) {
 ///
 /// The greeting is raised here rather than during activation so the webview
 /// cannot miss the event, and only once per activated pet.
-pub fn greet(app: &AppHandle) {
+pub fn greet<R: Runtime>(app: &AppHandle<R>) {
     let Some(app_state) = app.try_state::<crate::state::AppState>() else {
         return;
     };
@@ -264,7 +260,7 @@ pub fn greet(app: &AppHandle) {
 }
 
 /// Current visible state, used to seed a freshly loaded frontend.
-pub fn current_state(app: &AppHandle) -> Option<crate::events::PetStateEvent> {
+pub fn current_state<R: Runtime>(app: &AppHandle<R>) -> Option<crate::events::PetStateEvent> {
     let app_state = app.try_state::<crate::state::AppState>()?;
     let runtime = app_state.pet_runtime()?;
     let engine = runtime.engine.lock();

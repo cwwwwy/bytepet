@@ -8,7 +8,7 @@ use pet_core::memory::MemoryStore;
 use pet_core::persona::PersonaStore;
 use pet_core::pet::PetLibrary;
 use pet_core::secrets::{FileSecretStore, KeyringStore, SecretStore};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, Runtime};
 
 use crate::chat::ChatManager;
 use crate::tts::Tts;
@@ -33,8 +33,17 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn initialize(app: &AppHandle) -> anyhow::Result<Self> {
-        let config_dir = app.path().app_config_dir()?;
+    pub fn initialize<R: Runtime>(app: &AppHandle<R>) -> anyhow::Result<Self> {
+        // `PET_CONFIG_DIR` enables a portable install and hermetic tests.
+        let config_dir = match std::env::var_os("PET_CONFIG_DIR") {
+            Some(dir) => std::path::PathBuf::from(dir),
+            None => app.path().app_config_dir()?,
+        };
+        Self::initialize_with_dir(config_dir)
+    }
+
+    /// Initialize with an explicit data directory (tests, portable mode).
+    pub fn initialize_with_dir(config_dir: std::path::PathBuf) -> anyhow::Result<Self> {
         let paths = AppPaths::resolve(config_dir);
         paths.ensure()?;
 
@@ -129,7 +138,7 @@ impl AppState {
     }
 
     /// Speak a reply if TTS is enabled for the active persona.
-    pub fn speak_reply(&self, app: &AppHandle, text: &str) {
+    pub fn speak_reply<R: Runtime>(&self, app: &AppHandle<R>, text: &str) {
         let config = self.config();
         if !config.chat.speak_replies && !config.tts.enabled {
             return;
@@ -149,7 +158,7 @@ impl AppState {
 }
 
 /// Convenience accessor used by commands.
-pub fn state<'a>(app: &'a AppHandle) -> tauri::State<'a, AppState> {
+pub fn state<'a, R: Runtime>(app: &'a AppHandle<R>) -> tauri::State<'a, AppState> {
     app.state::<AppState>()
 }
 

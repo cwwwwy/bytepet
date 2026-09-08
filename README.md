@@ -125,18 +125,23 @@ export CARGO_HOME="$PWD/.cache/cargo"
 
 | 项目 | 结果 |
 |---|---|
-| `cargo test --workspace` | 125 项全部通过（pet-core 88 + 集成 29 + CLI 4 + 示例） |
+| `cargo test --workspace` | 129 项全部通过（pet-core 89 + 集成 32 + CLI 4 + 示例） |
 | `pnpm build` / `pnpm test` | 通过（前端 53 项测试） |
 | 真实 Codex 宠物渲染 | `~/.codex/pets/zip`（1536×1872）逐帧播放，帧时长与官方表一致 |
 | 打招呼 → 回落 | waving 行（sprite 24–27）播放后回到 idle |
 | 自动行走 | 窗口在屏幕内往返、边缘转身，左右跑行（8–15 / 16–23）正确切换 |
+| 聊天主链路 | 3 项端到端测试：命令层 → 人格/服务查找 → HTTP → SSE → 落库 → 用量，含无服务时的失败路径 |
 | 本地状态协议 | `GET /health`、`POST /state` 正常，健康快照含当前宠物与状态 |
+| Codex hook 往返 | 临时 `CODEX_HOME` 安装 → 真实 `codex exec` 触发 → 宠物切到 review → 卸载后配置逐字节还原 |
+| Claude Code hook 往返 | 临时 `HOME` 安装 → 真实 `claude -p` 触发 waving/running/review → 卸载后逐字节还原 |
 | Codex CLI 通道 | 真实会话跑通（`你好世界`，含 session id 与用量） |
 | Claude CLI 通道 | 真实会话跑通（含 reasoning/text 增量与用量） |
 | HTTP 通道 | 三种协议用录制 SSE 回放做集成测试（含取消与 401 脱敏） |
 | 密钥存储 | 已确认写入 macOS 钥匙串（`MacCredential`） |
 
 尚未在本机自动化验证、建议手动确认：像素级点击穿透手感、托盘菜单点击、聊天窗中文输入法、系统语音试听。
+
+> 回归过程中发现并修复：同一 agent 会话内 `running → review` 会被优先级仲裁挡住，导致宠物一直显示“工作中”。现在优先级只在**不同来源**之间仲裁，同一来源可自行推进状态（`pet::state::tests::same_source_can_step_down_but_others_cannot`）。
 
 ## 许可
 

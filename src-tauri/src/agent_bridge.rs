@@ -94,6 +94,7 @@ fn health(app: &AppHandle) -> AgentHealth {    let mut health = AgentHealth {
 }
 
 fn handle_event(app: &AppHandle, event: AgentEvent, default_ttl: u64) {
+    tracing::debug!(source = %event.source, state = %event.state, "agent event");
     let _ = app.emit(crate::events::AGENT_EVENT, &event);
     let Some(pet_state) = event.pet_state() else {
         tracing::debug!(state = %event.state, "ignoring unknown agent state");

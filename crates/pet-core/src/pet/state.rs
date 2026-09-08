@@ -396,11 +396,10 @@ impl PetEngine {
         let incoming = state.priority();
         if let Some(active) = &self.active {
             let expired = active.expires_at.is_some_and(|t| now >= t);
+            // A source owns its own lifecycle: `running -> review` from the same
+            // agent must be allowed. Priority only arbitrates *competing* sources.
             let same_source = active.source == source;
-            if !expired && incoming < active.state.priority() {
-                return None;
-            }
-            if !expired && incoming == active.state.priority() && !same_source {
+            if !expired && !same_source && incoming <= active.state.priority() {
                 return None;
             }
         }
@@ -576,6 +575,28 @@ mod tests {
         // failed outranks waiting
         assert!(e.raise(PetState::Failed, "chat", None, None, now).is_some());
         assert_eq!(e.current(), PetState::Failed);
+    }
+
+    #[test]
+    fn same_source_can_step_down_but_others_cannot() {
+        let mut e = engine(9);
+        let now = Instant::now();
+        assert!(e
+            .raise(PetState::Running, "agent:claude", None, None, now)
+            .is_some());
+        // Same agent session finishing: running -> review is a downgrade but valid.
+        assert!(e
+            .raise(PetState::Review, "agent:claude", None, None, now)
+            .is_some());
+        assert_eq!(e.current(), PetState::Review);
+        // A different source may not downgrade it.
+        assert!(e.raise(PetState::Idle, "system", None, None, now).is_none());
+        assert_eq!(e.current(), PetState::Review);
+        // ...but may still upgrade it.
+        assert!(e
+            .raise(PetState::Waiting, "agent:codex", None, None, now)
+            .is_some());
+        assert_eq!(e.current(), PetState::Waiting);
     }
 
     #[test]

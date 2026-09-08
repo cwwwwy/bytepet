@@ -131,7 +131,7 @@ function loop() {
 
   if (sprite !== lastSprite) {
     lastSprite = sprite;
-    void invoke("pet_sprite_index", { args: { index: sprite } }).catch(() => {});
+    void invoke("pet_sprite_index", { index: sprite }).catch(() => {});
   }
   if (!animation.loopAnim && !oneShotReported && elapsed >= animation.totalMs) {
     oneShotReported = true;
@@ -162,7 +162,7 @@ async function loadPet(entry: PetEntry | null) {
   if (!image) {
     // Asset protocol unavailable: pull the bytes through IPC instead.
     try {
-      const dataUrl = await invoke<string>("pet_spritesheet_data_url", { args: { id: pet.id } });
+      const dataUrl = await invoke<string>("pet_spritesheet_data_url", { id: pet.id });
       const img = new Image();
       img.src = dataUrl;
       await img.decode();
@@ -210,7 +210,7 @@ canvas.addEventListener("pointerenter", () => {
   const now = performance.now();
   if (now - lastHover < 20_000) return;
   lastHover = now;
-  void invoke("set_pet_state", { args: { state: "jumping" } }).catch(() => {});
+  void invoke("set_pet_state", { state: "jumping" }).catch(() => {});
 });
 
 canvas.addEventListener("pointerdown", async (event) => {
