@@ -1,0 +1,78 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Pet",
+  "version": "0.1.0",
+  "identifier": "com.pet.desktop",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5273",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "pet",
+        "url": "pet.html",
+        "title": "Pet",
+        "width": 192,
+        "height": 208,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false,
+        "visible": true
+      },
+      {
+        "label": "chat",
+        "url": "chat.html",
+        "title": "Pet",
+        "width": 440,
+        "height": 640,
+        "minWidth": 340,
+        "minHeight": 420,
+        "resizable": true,
+        "center": true,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPCONFIG/pets/**",
+          "$APPDATA/pets/**",
+          "$HOME/.codex/pets/**",
+          "$HOME/.unipet/pets/**"
+        ]
+      }
+    },
+    "trayIcon": {
+      "id": "main",
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg", "nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Entertainment",
+    "shortDescription": "Codex-compatible desktop pet with LLM chat",
+    "longDescription": "A cross-platform desktop pet that renders Codex-compatible sprite atlases, talks to Claude / OpenAI / DeepSeek or your local Codex and Claude Code CLIs, and supports fully custom personas.",
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    }
+  }
+}

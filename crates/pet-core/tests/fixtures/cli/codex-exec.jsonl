@@ -1,0 +1,14 @@
+# SYNTHETIC fixture (Codex CLI 0.151.0 could not be captured on this machine:
+# `codex exec` aborts with "failed to initialize in-process app-server client:
+# Operation not permitted" because the harness sandbox forbids the nested
+# seatbelt sandbox Codex applies). Shapes below follow the documented
+# `codex exec --json` JSONL contract and the literals found in the 0.151.0
+# binary (`thread.started`, `turn.started`, `item.completed`, `agent_message`,
+# `command_execution`, `reasoning`, `turn.completed`). See fixtures/cli/README.md.
+{"type":"thread.started","thread_id":"0199a213-81c0-7800-8aa1-bbab2a035a53"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"用户只是打了个招呼，直接回复即可。"}}
+{"type":"item.started","item":{"id":"item_1","type":"command_execution","command":"bash -lc true","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"command_execution","command":"bash -lc true","aggregated_output":"","exit_code":0,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"你好！有什么可以帮你的吗？"}}
+{"type":"turn.completed","usage":{"input_tokens":1234,"cached_input_tokens":1000,"output_tokens":12}}
