@@ -78,7 +78,7 @@ impl AgentEvent {
         Ok(())
     }
 
-    /// Map an agent lifecycle event name to a pet state.
+    /// Map an agent lifecycle event name to a bytepet state.
     pub fn state_for_lifecycle(event: &str) -> Option<PetState> {
         let e = event.trim().to_ascii_lowercase().replace(['_', '.'], "-");
         match e.as_str() {

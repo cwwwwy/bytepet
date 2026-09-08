@@ -7,7 +7,7 @@
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
-use pet_core::pet::state::PetState;
+use bytepet_core::pet::state::PetState;
 use tauri::{AppHandle, Manager, PhysicalPosition, Runtime};
 
 const TICK: Duration = Duration::from_millis(16);

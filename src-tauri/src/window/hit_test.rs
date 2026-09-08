@@ -11,9 +11,9 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
 
 use parking_lot::Mutex;
-use pet_core::config::ClickThroughMode;
-use pet_core::pet::atlas::AlphaMask;
-use pet_core::pet::manifest::FrameSpec;
+use bytepet_core::config::ClickThroughMode;
+use bytepet_core::pet::atlas::AlphaMask;
+use bytepet_core::pet::manifest::FrameSpec;
 use tauri::{AppHandle, Manager};
 
 /// Cursor polling interval. 30 Hz is invisible to the user and cheap.
@@ -185,7 +185,7 @@ mod tests {
                 img.put_pixel(x, y, image::Rgba([255, 0, 0, 255]));
             }
         }
-        let atlas = pet_core::pet::PetAtlas::from_image(img, frame, "t".into()).unwrap();
+        let atlas = bytepet_core::pet::PetAtlas::from_image(img, frame, "t".into()).unwrap();
         let state = HitState::default();
         state.set_atlas(atlas.mask, frame);
         state

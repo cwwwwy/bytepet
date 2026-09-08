@@ -1,13 +1,13 @@
 [package]
-name = "pet-app"
+name = "bytepet-app"
 description = "Cross-platform desktop pet application"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-default-run = "pet-app"
+default-run = "bytepet-app"
 
 [lib]
-name = "pet_app"
+name = "bytepet_app"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
@@ -19,7 +19,7 @@ custom-protocol = ["tauri/custom-protocol"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-pet-core = { path = "../crates/pet-core" }
+bytepet-core = { path = "../crates/bytepet-core" }
 tauri = { version = "2", features = [
   "tray-icon",
   "image-png",

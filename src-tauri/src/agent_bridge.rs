@@ -1,6 +1,6 @@
-//! Bridges the local agent status protocol to the pet state machine.
+//! Bridges the local agent status protocol to the bytepet state machine.
 
-use pet_core::agent::{AgentEvent, AgentHealth};
+use bytepet_core::agent::{AgentEvent, AgentHealth};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::state::AppState;
@@ -33,7 +33,7 @@ pub fn start(app: AppHandle) {
     let app_for_server = app.clone();
 
     tauri::async_runtime::spawn(async move {
-        let result = pet_core::agent::spawn_server(port, tx, move || health(&health_app)).await;
+        let result = bytepet_core::agent::spawn_server(port, tx, move || health(&health_app)).await;
         match result {
             Ok(handle) => {
                 tracing::info!(url = %handle.url(), "agent status server listening");
@@ -62,10 +62,10 @@ fn install_hooks_quietly(app: &AppHandle, port: u16) {
         return;
     };
     let home = dirs::home_dir().unwrap_or_else(|| state.paths.config_dir.clone());
-    let installer = pet_core::agent::HookInstaller::new(home, state.paths.config_dir.clone(), port);
+    let installer = bytepet_core::agent::HookInstaller::new(home, state.paths.config_dir.clone(), port);
     for kind in [
-        pet_core::agent::AgentKind::Codex,
-        pet_core::agent::AgentKind::ClaudeCode,
+        bytepet_core::agent::AgentKind::Codex,
+        bytepet_core::agent::AgentKind::ClaudeCode,
     ] {
         match installer.install(kind) {
             Ok(report) => tracing::info!(agent = kind.label(), ?report.messages, "agent hooks installed"),

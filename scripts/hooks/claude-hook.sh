@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 # REFERENCE TEMPLATE — not the runtime script.
 #
-# `pet hooks install claude-code` generates its own copy at
+# `bytepet hooks install claude-code` generates its own copy at
 #   <data_dir>/hooks/claude-hook.sh
 # with `__PET_PORT__` replaced by the real port, and registers it as a command
 # hook for SessionStart, UserPromptSubmit, PreToolUse, PostToolUse,
@@ -16,7 +16,7 @@
 #   }
 #
 # Claude Code sends the hook payload as JSON on stdin. The wrapper maps
-# `hook_event_name` to a pet state, POSTs it, prints nothing and always exits
+# `hook_event_name` to a bytepet state, POSTs it, prints nothing and always exits
 # 0 so it can never block or steer Claude Code.
 # ---------------------------------------------------------------------------
 PET_PORT=__PET_PORT__

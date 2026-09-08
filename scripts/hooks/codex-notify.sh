@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 # REFERENCE TEMPLATE — not the runtime script.
 #
-# `pet hooks install codex` generates its own copy at
+# `bytepet hooks install codex` generates its own copy at
 #   <data_dir>/hooks/codex-notify.sh
 # with `__PET_PORT__` replaced by the real port and `__PET_CHAIN__` replaced by
 # the `notify` argv that was configured before pet was installed. The generated

@@ -1,6 +1,6 @@
 # Agent hooks
 
-Reference copies of the wrapper scripts that `pet hooks install` generates. The
+Reference copies of the wrapper scripts that `bytepet hooks install` generates. The
 CLI does **not** run these files: it writes its own copies under
 `<data_dir>/hooks/` with the real port and the previous `notify` command baked
 in. This directory exists so the behaviour can be reviewed without installing
@@ -13,15 +13,15 @@ anything.
 | Codex       | `~/.codex/config.toml`         | `notify = ["<data_dir>/hooks/codex-notify.sh"]` (chains to the previous `notify`) | `<data_dir>/hooks/codex-notify.sh` / `codex-notify.cmd`     |
 | Claude Code | `~/.claude/settings.json`      | adds a `command` hook for 7 lifecycle events under `"hooks"`                      | `<data_dir>/hooks/claude-hook.sh` / `claude-hook.cmd`       |
 
-`<data_dir>` is the app config directory (`com.pet.desktop` inside the platform
-config dir, e.g. `~/Library/Application Support/com.pet.desktop` on macOS).
+`<data_dir>` is the app config directory (`com.bytepet.desktop` inside the platform
+config dir, e.g. `~/Library/Application Support/com.bytepet.desktop` on macOS).
 
 Both installers are non-destructive and reversible:
 
 * the original config is backed up to `<config>.pet-backup`;
 * an exact record (original `notify` argv / added events, wrapper path,
   timestamp, config fingerprint) is written to `<data_dir>/hooks/state.json`;
-* `pet hooks uninstall` restores the backup byte-for-byte when the config was
+* `bytepet hooks uninstall` restores the backup byte-for-byte when the config was
   not edited after install, otherwise it removes only pet's entries;
 * installing twice is a no-op, uninstalling twice is `Ok`.
 
@@ -79,8 +79,8 @@ exits 0.
 ## Removing the integration
 
 ```bash
-pet hooks uninstall all          # or: pet hooks uninstall codex / claude-code
-pet hooks status                 # verify
+bytepet hooks uninstall all          # or: bytepet hooks uninstall codex / claude-code
+bytepet hooks status                 # verify
 ```
 
 Manual removal, if you prefer:

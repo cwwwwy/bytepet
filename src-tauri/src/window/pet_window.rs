@@ -5,9 +5,9 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use parking_lot::Mutex;
-use pet_core::config::AppConfig;
-use pet_core::pet::state::{PetEngine, PetState};
-use pet_core::pet::{PetAtlas, PetEntry};
+use bytepet_core::config::AppConfig;
+use bytepet_core::pet::state::{PetEngine, PetState};
+use bytepet_core::pet::{PetAtlas, PetEntry};
 use tauri::{AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, Runtime};
 
 use super::hit_test::HitState;
@@ -32,13 +32,13 @@ pub struct WalkController {
 impl WalkController {
     pub fn note_user_action(&self) {
         self.last_user_action_ms
-            .store(pet_core::memory::now_ms() as u64, Ordering::Relaxed);
+            .store(bytepet_core::memory::now_ms() as u64, Ordering::Relaxed);
     }
 
     pub fn recently_interacted(&self, grace_seconds: f32) -> bool {
         let last = self.last_user_action_ms.load(Ordering::Relaxed) as i64;
         let grace = (grace_seconds.max(0.0) * 1000.0) as i64;
-        pet_core::memory::now_ms() - last < grace
+        bytepet_core::memory::now_ms() - last < grace
     }
 }
 
@@ -124,7 +124,7 @@ pub fn activate_active_pet<R: Runtime>(app: &AppHandle<R>) -> anyhow::Result<()>
 }
 
 /// Apply pet-window geometry and behaviour from config.
-pub fn apply_config<R: Runtime>(app: &AppHandle<R>, config: &AppConfig, frame: pet_core::pet::FrameSpec) {
+pub fn apply_config<R: Runtime>(app: &AppHandle<R>, config: &AppConfig, frame: bytepet_core::pet::FrameSpec) {
     let Some(win) = app.get_webview_window("pet") else {
         return;
     };
@@ -160,7 +160,7 @@ pub fn save_position<R: Runtime>(app: &AppHandle<R>) {
     };
     if let Some(state) = app.try_state::<crate::state::AppState>() {
         let _ = state.update_config(|cfg| {
-            cfg.pet.start_position = Some(pet_core::config::WindowPosition {
+            cfg.pet.start_position = Some(bytepet_core::config::WindowPosition {
                 x: pos.x as f64,
                 y: pos.y as f64,
                 monitor: None,
@@ -183,7 +183,7 @@ pub fn set_dragging<R: Runtime>(app: &AppHandle<R>, dragging: bool) {
     }
 }
 
-/// Raise a transient pet state from the UI or agent events.
+/// Raise a transient bytepet state from the UI or agent events.
 pub fn raise_state<R: Runtime>(
     app: &AppHandle<R>,
     state: PetState,

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Pet",
+  "productName": "BytePet",
   "version": "0.1.0",
-  "identifier": "com.pet.desktop",
+  "identifier": "com.bytepet.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5273",
@@ -16,7 +16,7 @@
       {
         "label": "pet",
         "url": "pet.html",
-        "title": "Pet",
+        "title": "BytePet",
         "width": 192,
         "height": 208,
         "transparent": true,
@@ -30,7 +30,7 @@
       {
         "label": "chat",
         "url": "chat.html",
-        "title": "Pet",
+        "title": "BytePet",
         "width": 440,
         "height": 640,
         "minWidth": 340,

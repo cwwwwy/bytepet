@@ -11,8 +11,8 @@ use std::time::Duration;
 use axum::response::IntoResponse;
 use axum::routing::post;
 use axum::Router;
-use pet_core::llm::{ProviderConfig, ProviderKind};
-use pet_core::secrets::{MemorySecretStore, SecretStore};
+use bytepet_core::llm::{ProviderConfig, ProviderKind};
+use bytepet_core::secrets::{MemorySecretStore, SecretStore};
 use tauri::Manager;
 
 const SSE_BODY: &str = concat!(
@@ -54,7 +54,7 @@ async fn send_message_streams_persists_and_reports_usage() {
     let tmp = tempfile::tempdir().unwrap();
     let app = build_app();
     let mut state =
-        pet_app::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
+        bytepet_app::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
             .expect("app state");
 
     // Point the provider at the mock and keep the key out of the keychain.
@@ -81,8 +81,8 @@ async fn send_message_streams_persists_and_reports_usage() {
     app.manage(state);
 
     let conversation =
-        pet_app::commands::create_conversation(app.handle().clone(), None).expect("conversation");
-    pet_app::commands::send_message(
+        bytepet_app::commands::create_conversation(app.handle().clone(), None).expect("conversation");
+    bytepet_app::commands::send_message(
         app.handle().clone(),
         conversation.id.clone(),
         "打个招呼".to_string(),
@@ -90,7 +90,7 @@ async fn send_message_streams_persists_and_reports_usage() {
     .expect("send_message accepted");
 
     // Poll until the assistant message is persisted (the turn runs in a task).
-    let state = app.state::<pet_app::state::AppState>();
+    let state = app.state::<bytepet_app::state::AppState>();
     let mut messages = Vec::new();
     for _ in 0..200 {
         messages = state.memory.messages(&conversation.id, 10).unwrap();
@@ -118,7 +118,7 @@ async fn send_message_without_provider_fails_without_persisting_assistant() {
     let tmp = tempfile::tempdir().unwrap();
     let app = build_app();
     let state =
-        pet_app::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
+        bytepet_app::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
             .expect("app state");
     // No providers configured at all.
     state
@@ -130,8 +130,8 @@ async fn send_message_without_provider_fails_without_persisting_assistant() {
     app.manage(state);
 
     let conversation =
-        pet_app::commands::create_conversation(app.handle().clone(), None).expect("conversation");
-    let err = pet_app::commands::send_message(
+        bytepet_app::commands::create_conversation(app.handle().clone(), None).expect("conversation");
+    let err = bytepet_app::commands::send_message(
         app.handle().clone(),
         conversation.id.clone(),
         "在吗".to_string(),
@@ -139,7 +139,7 @@ async fn send_message_without_provider_fails_without_persisting_assistant() {
     .expect_err("should reject when no provider is configured");
     assert!(err.contains("模型服务") || err.contains("provider"), "got: {err}");
 
-    let state = app.state::<pet_app::state::AppState>();
+    let state = app.state::<bytepet_app::state::AppState>();
     assert!(state.memory.messages(&conversation.id, 10).unwrap().is_empty());
 }
 
@@ -148,15 +148,15 @@ async fn bootstrap_state_exposes_pets_personas_and_settings() {
     let tmp = tempfile::tempdir().unwrap();
     let app = build_app();
     let state =
-        pet_app::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
+        bytepet_app::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
             .expect("app state");
     app.manage(state);
 
-    let boot = pet_app::commands::get_bootstrap_state(app.handle().clone()).expect("bootstrap");
-    assert_eq!(boot.config.schema_version, pet_core::config::CONFIG_SCHEMA_VERSION);
+    let boot = bytepet_app::commands::get_bootstrap_state(app.handle().clone()).expect("bootstrap");
+    assert_eq!(boot.config.schema_version, bytepet_core::config::CONFIG_SCHEMA_VERSION);
     assert!(!boot.personas.is_empty(), "a default persona is seeded");
     assert_eq!(boot.agent_url, format!("http://127.0.0.1:{}", boot.config.agent.port));
     assert!(boot.data_dir.starts_with(tmp.path()));
     // No pet is installed in the temp library, and none must be invented.
-    assert!(boot.pets.iter().all(|p| p.root != pet_core::pet::RootKind::AppData));
+    assert!(boot.pets.iter().all(|p| p.root != bytepet_core::pet::RootKind::AppData));
 }

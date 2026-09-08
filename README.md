@@ -1,4 +1,6 @@
-# 桌宠 · Pet
+# 桌宠 · BytePet
+
+`https://github.com/cwwwwy/bytepet`
 
 一款用 Rust 开发的跨平台桌面宠物（Windows / macOS）。它兼容 **Codex 桌宠图集格式**，能直接使用你 `~/.codex/pets/` 里已有的宠物；同时可以接入 Claude、OpenAI、DeepSeek 等大模型，也能直接复用本机已登录的 `codex` / `claude` 命令行，并支持完全自定义人格。
 
@@ -14,7 +16,7 @@
 └───────────────┬─────────────────────────────────────────────────┘
                 │
 ┌───────────────▼─────────────────────────────────────────────────┐
-│ pet-core（纯 Rust 核心，无 UI 依赖）                              │
+│ bytepet-core（纯 Rust 核心，无 UI 依赖）                              │
 │ 宠物图集/校验/状态机 · 5 种模型通道 · 人格 · 记忆 · Agent 状态协议   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -42,6 +44,8 @@
 前置：Rust ≥ 1.85、Node ≥ 20、pnpm。
 
 ```bash
+git clone https://github.com/cwwwwy/bytepet.git
+cd bytepet
 pnpm install
 pnpm tauri dev          # 开发模式（宠物窗 + 托盘 + 聊天窗）
 pnpm tauri build        # 打包 .app/.dmg（macOS）或 .msi/.exe（Windows）
@@ -66,9 +70,9 @@ API Key 只写入 macOS 钥匙串 / Windows 凭据管理器，配置文件里只
 ### 让宠物跟随 Codex / Claude Code
 
 ```bash
-pet hooks install all      # 安装 hook（会先备份配置，可完全回滚）
-pet hooks status
-pet hooks uninstall all
+bytepet hooks install all      # 安装 hook（会先备份配置，可完全回滚）
+bytepet hooks status
+bytepet hooks uninstall all
 ```
 
 也可以从任何脚本或 agent 直接调用本地协议：
@@ -82,8 +86,8 @@ curl -XPOST http://127.0.0.1:17872/state \
 ## 仓库结构
 
 ```
-crates/pet-core/    纯 Rust 核心：宠物格式、状态机、模型通道、人格、记忆、协议
-crates/pet-cli/     pet 命令行（state / doctor / pet / hooks）
+crates/bytepet-core/    纯 Rust 核心：宠物格式、状态机、模型通道、人格、记忆、协议
+crates/bytepet-cli/     pet 命令行（state / doctor / pet / hooks）
 src-tauri/          Tauri 应用：窗口、托盘、穿透、行走、TTS、IPC
 src/pet/            宠物窗渲染器（canvas，逐帧）
 src/chat/           聊天与设置界面（Preact）
@@ -105,7 +109,7 @@ pnpm test                         # 前端测试
 export CARGO_HOME="$PWD/.cache/cargo"
 ```
 
-日志：设置环境变量 `PET_LOG=debug` 后启动。
+日志：设置环境变量 `BYTEPET_LOG=debug` 后启动。
 
 ## 文档
 
@@ -125,7 +129,7 @@ export CARGO_HOME="$PWD/.cache/cargo"
 
 | 项目 | 结果 |
 |---|---|
-| `cargo test --workspace` | 129 项全部通过（pet-core 89 + 集成 32 + CLI 4 + 示例） |
+| `cargo test --workspace` | 129 项全部通过（bytepet-core 89 + 集成 32 + CLI 4 + 示例） |
 | `pnpm build` / `pnpm test` | 通过（前端 53 项测试） |
 | 真实 Codex 宠物渲染 | `~/.codex/pets/zip`（1536×1872）逐帧播放，帧时长与官方表一致 |
 | 打招呼 → 回落 | waving 行（sprite 24–27）播放后回到 idle |
@@ -145,4 +149,4 @@ export CARGO_HOME="$PWD/.cache/cargo"
 
 ## 许可
 
-MIT
+[MIT](LICENSE) © cwwwwy

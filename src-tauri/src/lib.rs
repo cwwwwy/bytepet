@@ -117,8 +117,8 @@ pub fn run() {
 }
 
 fn init_tracing() {
-    let filter = EnvFilter::try_from_env("PET_LOG")
-        .unwrap_or_else(|_| EnvFilter::new("info,pet_app=debug,pet_core=debug"));
+    let filter = EnvFilter::try_from_env("BYTEPET_LOG")
+        .unwrap_or_else(|_| EnvFilter::new("info,bytepet_app=debug,bytepet_core=debug"));
     let _ = tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_target(false)

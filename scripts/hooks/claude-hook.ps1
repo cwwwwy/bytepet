@@ -1,13 +1,13 @@
 # ---------------------------------------------------------------------------
 # REFERENCE TEMPLATE — not the runtime script.
 #
-# `pet hooks install claude-code` generates <data_dir>/hooks/claude-hook.ps1
+# `bytepet hooks install claude-code` generates <data_dir>/hooks/claude-hook.ps1
 # plus a claude-hook.cmd launcher, with __PET_PORT__ filled in, and registers
 # the .cmd as a command hook for SessionStart, UserPromptSubmit, PreToolUse,
 # PostToolUse, Notification, Stop and SubagentStop.
 #
 # Claude Code sends the hook payload as JSON on stdin. The wrapper maps
-# `hook_event_name` to a pet state, POSTs it, prints nothing and exits 0.
+# `hook_event_name` to a bytepet state, POSTs it, prints nothing and exits 0.
 # ---------------------------------------------------------------------------
 $ErrorActionPreference = 'SilentlyContinue'
 $PetPort = __PET_PORT__

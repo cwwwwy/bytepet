@@ -17,7 +17,7 @@ pub struct TurnContext<'a> {
     pub conversation_id: &'a str,
     /// Display name of the pet skin currently on screen.
     pub pet_name: Option<&'a str>,
-    /// Human readable pet state (e.g. "工作中").
+    /// Human readable bytepet state (e.g. "工作中").
     pub pet_state: Option<&'a str>,
     /// Model id to send to the provider (overrides the provider default).
     pub model: String,

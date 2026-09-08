@@ -3,11 +3,11 @@
 use std::sync::Arc;
 
 use parking_lot::RwLock;
-use pet_core::config::{AppConfig, AppPaths};
-use pet_core::memory::MemoryStore;
-use pet_core::persona::PersonaStore;
-use pet_core::pet::PetLibrary;
-use pet_core::secrets::{FileSecretStore, KeyringStore, SecretStore};
+use bytepet_core::config::{AppConfig, AppPaths};
+use bytepet_core::memory::MemoryStore;
+use bytepet_core::persona::PersonaStore;
+use bytepet_core::pet::PetLibrary;
+use bytepet_core::secrets::{FileSecretStore, KeyringStore, SecretStore};
 use tauri::{AppHandle, Manager, Runtime};
 
 use crate::chat::ChatManager;
@@ -29,13 +29,13 @@ pub struct AppState {
     /// Background loops (hit test + walk) start only once per process.
     pub loops_started: std::sync::atomic::AtomicBool,
     /// Handle to the loopback agent status server, if running.
-    pub agent_server: RwLock<Option<pet_core::agent::ServerHandle>>,
+    pub agent_server: RwLock<Option<bytepet_core::agent::ServerHandle>>,
 }
 
 impl AppState {
     pub fn initialize<R: Runtime>(app: &AppHandle<R>) -> anyhow::Result<Self> {
-        // `PET_CONFIG_DIR` enables a portable install and hermetic tests.
-        let config_dir = match std::env::var_os("PET_CONFIG_DIR") {
+        // `BYTEPET_CONFIG_DIR` enables a portable install and hermetic tests.
+        let config_dir = match std::env::var_os("BYTEPET_CONFIG_DIR") {
             Some(dir) => std::path::PathBuf::from(dir),
             None => app.path().app_config_dir()?,
         };
@@ -66,7 +66,7 @@ impl AppState {
             let _ = config.save(&paths.config_file);
         }
 
-        let keyring = KeyringStore::new("com.pet.desktop");
+        let keyring = KeyringStore::new("com.bytepet.desktop");
         let (secrets, keyring_available): (Arc<dyn SecretStore>, bool) =
             match keyring.get("__probe__") {
                 Ok(_) => (Arc::new(keyring), true),
@@ -128,7 +128,7 @@ impl AppState {
     }
 
     /// Persona that is currently active (falls back to the first one).
-    pub fn active_persona(&self) -> Option<pet_core::persona::Persona> {
+    pub fn active_persona(&self) -> Option<bytepet_core::persona::Persona> {
         let config = self.config();
         config
             .active_persona
@@ -167,7 +167,7 @@ pub fn state<'a, R: Runtime>(app: &'a AppHandle<R>) -> tauri::State<'a, AppState
 /// Returns true when anything was added. Only runs when the user has not
 /// configured a provider yet, so it never overrides real configuration.
 fn seed_default_providers(config: &mut AppConfig) -> bool {
-    use pet_core::llm::{ProviderConfig, ProviderKind};
+    use bytepet_core::llm::{ProviderConfig, ProviderKind};
     if !config.providers.is_empty() {
         return false;
     }

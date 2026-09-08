@@ -1,5 +1,5 @@
 [package]
-name = "pet-core"
+name = "bytepet-core"
 description = "Core logic for the desktop pet: Codex-compatible pet atlas, LLM providers, personas, memory, agent protocol"
 version.workspace = true
 edition.workspace = true

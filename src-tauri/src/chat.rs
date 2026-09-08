@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use parking_lot::Mutex;
-use pet_core::chat::{run_turn, summarize_conversation, TurnContext};
-use pet_core::llm::{build_provider, ChatDelta, ChatProvider, ProviderConfig};
-use pet_core::memory::{MemoryConfig, MemoryStore};
+use bytepet_core::chat::{run_turn, summarize_conversation, TurnContext};
+use bytepet_core::llm::{build_provider, ChatDelta, ChatProvider, ProviderConfig};
+use bytepet_core::memory::{MemoryConfig, MemoryStore};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
@@ -114,7 +114,7 @@ impl ChatManager {
         // The pet reacts while the model works (10 minute safety TTL).
         crate::window::pet_window::raise_state(
             &app,
-            pet_core::pet::state::PetState::Running,
+            bytepet_core::pet::state::PetState::Running,
             "chat",
             None,
             Some(std::time::Duration::from_secs(600)),
@@ -189,7 +189,7 @@ impl ChatManager {
                     );
                     crate::window::pet_window::raise_state(
                         &app_for_task,
-                        pet_core::pet::state::PetState::Review,
+                        bytepet_core::pet::state::PetState::Review,
                         "chat",
                         None,
                         Some(std::time::Duration::from_secs(3)),
@@ -220,11 +220,11 @@ impl ChatManager {
                     }
                 }
                 Err(err) => {
-                    let cancelled = matches!(err, pet_core::Error::Cancelled) || cancel.is_cancelled();
+                    let cancelled = matches!(err, bytepet_core::Error::Cancelled) || cancel.is_cancelled();
                     let message = if cancelled {
                         "已取消".to_string()
                     } else {
-                        pet_core::secrets::redact(&err.to_string())
+                        bytepet_core::secrets::redact(&err.to_string())
                     };
                     let _ = app_for_task.emit(
                         CHAT_ERROR,
@@ -238,7 +238,7 @@ impl ChatManager {
                     } else {
                         crate::window::pet_window::raise_state(
                             &app_for_task,
-                            pet_core::pet::state::PetState::Failed,
+                            bytepet_core::pet::state::PetState::Failed,
                             "chat",
                             Some(message.clone()),
                             Some(std::time::Duration::from_secs(5)),
@@ -260,6 +260,6 @@ fn build_chat_provider<R: Runtime>(
         .try_state::<crate::state::AppState>()
         .ok_or("应用状态未初始化")?;
     build_provider(cfg, state.secrets.as_ref())
-        .map_err(|e| pet_core::secrets::redact(&e.to_string()))
+        .map_err(|e| bytepet_core::secrets::redact(&e.to_string()))
 }
 

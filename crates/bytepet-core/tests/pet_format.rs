@@ -5,10 +5,10 @@
 use std::path::Path;
 
 use image::{Rgba, RgbaImage};
-use pet_core::pet::library::{PetLibrary, RootKind};
-use pet_core::pet::manifest::FrameSpec;
-use pet_core::pet::state::PetState;
-use pet_core::pet::PetAtlas;
+use bytepet_core::pet::library::{PetLibrary, RootKind};
+use bytepet_core::pet::manifest::FrameSpec;
+use bytepet_core::pet::state::PetState;
+use bytepet_core::pet::PetAtlas;
 
 fn write_pet(dir: &Path, manifest_json: &str, frame: FrameSpec, paint: bool) {
     std::fs::create_dir_all(dir).unwrap();

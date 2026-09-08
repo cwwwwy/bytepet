@@ -16,7 +16,7 @@
 
 | 目录 | 来源 | 说明 |
 |---|---|---|
-| `~/Library/Application Support/com.pet.desktop/pets/`（macOS）<br>`%APPDATA%\com.pet.desktop\pets\`（Windows） | 本地库 | 通过「导入」复制进来的宠物 |
+| `~/Library/Application Support/com.bytepet.desktop/pets/`（macOS）<br>`%APPDATA%\com.bytepet.desktop\pets\`（Windows） | 本地库 | 通过「导入」复制进来的宠物 |
 | `~/.codex/pets/*` | Codex | 直接使用你已有的 Codex 宠物 |
 | `~/.unipet/pets/*` | UniPet | 兼容 UniPet 安装的宠物 |
 
@@ -87,7 +87,7 @@ V2 增加注视行时带 `"spriteVersionNumber": 2`。
 
 如果清单里提供了 `animations`，对应状态以清单为准（`fps` 或逐帧 `durationMs`、`loop`、`fallback`），其余状态回落到官方表。
 
-状态名兼容写法：`running_right`、`working`、`work`、`wave`、`success`、`error`、`look9` 等别名都会被识别（见 `pet-core/src/pet/state.rs`）。
+状态名兼容写法：`running_right`、`working`、`work`、`wave`、`success`、`error`、`look9` 等别名都会被识别（见 `bytepet-core/src/pet/state.rs`）。
 
 ## 5. 状态优先级
 
@@ -110,7 +110,7 @@ failed(90) > waiting(80) > running(70) > review(60)
 
 ## 7. 校验报告
 
-`pet validate <path>` 或界面里的「校验」会返回：
+`bytepet validate <path>` 或界面里的「校验」会返回：
 
 - `errors`：缺清单、图集缺失、解码失败、几何不匹配、路径穿越、无 idle 动画；
 - `warnings`：几何推断、未使用但非透明的单元格。

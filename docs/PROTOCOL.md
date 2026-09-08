@@ -92,11 +92,11 @@ hook 里使用的事件名会被映射到状态（`AgentEvent::state_for_lifecyc
 ## 内置安装器
 
 ```bash
-pet hooks install codex         # 包装 ~/.codex/config.toml 的 notify
-pet hooks install claude-code   # 合并 ~/.claude/settings.json 的 hooks
-pet hooks install all
-pet hooks status
-pet hooks uninstall all
+bytepet hooks install codex         # 包装 ~/.codex/config.toml 的 notify
+bytepet hooks install claude-code   # 合并 ~/.claude/settings.json 的 hooks
+bytepet hooks install all
+bytepet hooks status
+bytepet hooks uninstall all
 ```
 
 安装器规则：
@@ -109,10 +109,10 @@ pet hooks uninstall all
 ## CLI
 
 ```bash
-pet state running "跑测试中" --source my-script --ttl 120s
-pet state waiting --source my-script
-pet clear --source my-script
-pet doctor
+bytepet state running "跑测试中" --source my-script --ttl 120s
+bytepet state waiting --source my-script
+bytepet clear --source my-script
+bytepet doctor
 ```
 
-`pet doctor` 会检查：数据目录、宠物库、本地服务可达性、hook 安装状态、当前宠物是否有效，并给出下一步建议。
+`bytepet doctor` 会检查：数据目录、宠物库、本地服务可达性、hook 安装状态、当前宠物是否有效，并给出下一步建议。

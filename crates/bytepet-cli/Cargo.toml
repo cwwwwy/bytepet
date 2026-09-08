@@ -1,16 +1,16 @@
 [package]
-name = "pet-cli"
-description = "Command line companion for the desktop pet (state reporting, pet library, doctor, hook install)"
+name = "bytepet-cli"
+description = "BytePet command line: state reporting, pet library, doctor, hook install"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "pet"
+name = "bytepet"
 path = "src/main.rs"
 
 [dependencies]
-pet-core = { path = "../pet-core" }
+bytepet-core = { path = "../bytepet-core" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }

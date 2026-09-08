@@ -1,8 +1,8 @@
 //! End-to-end probe for the local CLI providers.
 //!
 //! ```text
-//! cargo run -p pet-core --example cli_probe -- claude "回复：你好"
-//! cargo run -p pet-core --example cli_probe -- codex  "回复：你好"
+//! cargo run -p bytepet-core --example cli_probe -- claude "回复：你好"
+//! cargo run -p bytepet-core --example cli_probe -- codex  "回复：你好"
 //! ```
 //!
 //! Prints every `ChatDelta` so the CLI JSONL mapping can be verified against a
@@ -10,8 +10,8 @@
 
 use std::sync::Arc;
 
-use pet_core::llm::{ChatProvider, ChatRequest, ProviderConfig, ProviderKind};
-use pet_core::secrets::MemorySecretStore;
+use bytepet_core::llm::{ChatProvider, ChatRequest, ProviderConfig, ProviderKind};
+use bytepet_core::secrets::MemorySecretStore;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
@@ -30,11 +30,11 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let provider: Arc<dyn ChatProvider> =
-        pet_core::llm::build_provider(&cfg, &MemorySecretStore::new())?;
+        bytepet_core::llm::build_provider(&cfg, &MemorySecretStore::new())?;
     println!("provider={} kind={:?}", provider.id(), provider.kind());
 
     let mut request = ChatRequest::new(cfg.model.clone(), "你是一只简洁的桌宠，回答不超过一句话。");
-    request.messages = vec![pet_core::llm::ChatMessage::user(prompt)];
+    request.messages = vec![bytepet_core::llm::ChatMessage::user(prompt)];
     request.max_tokens = Some(200);
 
     let (tx, mut rx) = mpsc::channel(64);
@@ -44,19 +44,19 @@ async fn main() -> anyhow::Result<()> {
     let mut text = String::new();
     while let Some(delta) = rx.recv().await {
         match &delta {
-            pet_core::llm::ChatDelta::Text { text: t } => {
+            bytepet_core::llm::ChatDelta::Text { text: t } => {
                 text.push_str(t);
                 println!("TEXT      {:?}", t);
             }
-            pet_core::llm::ChatDelta::Reasoning { text: t } => {
+            bytepet_core::llm::ChatDelta::Reasoning { text: t } => {
                 println!("REASONING {:?}", t.chars().take(60).collect::<String>())
             }
-            pet_core::llm::ChatDelta::Status { message } => println!("STATUS    {message}"),
-            pet_core::llm::ChatDelta::Usage {
+            bytepet_core::llm::ChatDelta::Status { message } => println!("STATUS    {message}"),
+            bytepet_core::llm::ChatDelta::Usage {
                 input_tokens,
                 output_tokens,
             } => println!("USAGE     in={input_tokens} out={output_tokens}"),
-            pet_core::llm::ChatDelta::Done { finish_reason } => {
+            bytepet_core::llm::ChatDelta::Done { finish_reason } => {
                 println!("DONE      {finish_reason:?}")
             }
         }

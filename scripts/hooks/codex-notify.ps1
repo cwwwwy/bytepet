@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
 # REFERENCE TEMPLATE — not the runtime script.
 #
-# `pet hooks install codex` generates <data_dir>/hooks/codex-notify.ps1 plus a
+# `bytepet hooks install codex` generates <data_dir>/hooks/codex-notify.ps1 plus a
 # codex-notify.cmd launcher, with __PET_PORT__ / __PET_CHAIN__ filled in.
 # ~/.codex/config.toml then points at the .cmd wrapper on Windows:
 #

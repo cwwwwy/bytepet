@@ -7,12 +7,12 @@
 //! the JavaScript side (`invoke("use_pet", { id })`); Tauri maps `newId` to the
 //! Rust `new_id`. Optional parameters may be omitted entirely.
 
-use pet_core::config::AppConfig;
-use pet_core::llm::ProviderConfig;
-use pet_core::memory::{Conversation, StoredMessage};
-use pet_core::persona::Persona;
-use pet_core::pet::library::{LibraryRoot, ValidationReport};
-use pet_core::pet::{PetEntry, PetState};
+use bytepet_core::config::AppConfig;
+use bytepet_core::llm::ProviderConfig;
+use bytepet_core::memory::{Conversation, StoredMessage};
+use bytepet_core::persona::Persona;
+use bytepet_core::pet::library::{LibraryRoot, ValidationReport};
+use bytepet_core::pet::{PetEntry, PetState};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
@@ -81,7 +81,7 @@ pub fn list_pets<R: Runtime>(app: AppHandle<R>) -> Vec<PetEntry> {
 
 #[tauri::command]
 pub fn validate_pet(path: String) -> ValidationReport {
-    pet_core::pet::PetLibrary::validate_dir(std::path::Path::new(&path))
+    bytepet_core::pet::PetLibrary::validate_dir(std::path::Path::new(&path))
 }
 
 #[tauri::command]
@@ -146,7 +146,7 @@ pub fn list_personas<R: Runtime>(app: AppHandle<R>) -> Result<Vec<Persona>, Stri
 
 #[tauri::command]
 pub fn persona_templates() -> std::collections::BTreeMap<String, Persona> {
-    pet_core::persona::templates()
+    bytepet_core::persona::templates()
 }
 
 #[tauri::command]
@@ -293,12 +293,12 @@ pub async fn test_provider<R: Runtime>(app: AppHandle<R>, id: String) -> Result<
             .ok_or_else(|| format!("provider '{}' does not exist", id))?;
         (cfg, st.secrets.clone())
     };
-    let provider = match pet_core::llm::build_provider(&cfg, secrets.as_ref()) {
+    let provider = match bytepet_core::llm::build_provider(&cfg, secrets.as_ref()) {
         Ok(p) => p,
         Err(err) => {
             return Ok(ProviderTestResult {
                 ok: false,
-                message: pet_core::secrets::redact(&err.to_string()),
+                message: bytepet_core::secrets::redact(&err.to_string()),
                 latency_ms: None,
             })
         }
@@ -312,7 +312,7 @@ pub async fn test_provider<R: Runtime>(app: AppHandle<R>, id: String) -> Result<
         }),
         Err(err) => Ok(ProviderTestResult {
             ok: false,
-            message: pet_core::secrets::redact(&err.to_string()),
+            message: bytepet_core::secrets::redact(&err.to_string()),
             latency_ms: Some(started.elapsed().as_millis() as u64),
         }),
     }
@@ -407,7 +407,7 @@ pub fn cancel_message<R: Runtime>(app: AppHandle<R>, conversation_id: String) {
 pub fn list_facts<R: Runtime>(
     app: AppHandle<R>,
     persona_id: String,
-) -> Result<Vec<pet_core::memory::Fact>, String> {
+) -> Result<Vec<bytepet_core::memory::Fact>, String> {
     app_state(&app)
         .memory
         .list_facts(&persona_id)
@@ -457,7 +457,7 @@ pub fn save_settings<R: Runtime>(app: AppHandle<R>, config: AppConfig) -> Result
     Ok(saved)
 }
 
-// --- pet state / tts / hooks ------------------------------------------------
+// --- bytepet state / tts / hooks ------------------------------------------------
 
 /// Manual state override, used by the UI (and useful for debugging).
 #[tauri::command]
@@ -468,7 +468,7 @@ pub fn set_pet_state<R: Runtime>(
     ttl_ms: Option<u64>,
 ) -> Result<(), String> {
     let state = PetState::from_name(&state)
-        .ok_or_else(|| format!("unknown pet state '{}'", state))?;
+        .ok_or_else(|| format!("unknown bytepet state '{}'", state))?;
     let ttl = ttl_ms.map(std::time::Duration::from_millis);
     crate::window::pet_window::raise_state(&app, state, "ui", message, ttl);
     Ok(())
@@ -497,36 +497,36 @@ pub fn stop_speaking<R: Runtime>(app: AppHandle<R>) {
 }
 
 #[tauri::command]
-pub fn hooks_status<R: Runtime>(app: AppHandle<R>) -> Result<Vec<pet_core::agent::HookStatus>, String> {
+pub fn hooks_status<R: Runtime>(app: AppHandle<R>) -> Result<Vec<bytepet_core::agent::HookStatus>, String> {
     let st = app_state(&app);
     let installer = hook_installer(&st);
     Ok(vec![
-        installer.status(pet_core::agent::AgentKind::Codex),
-        installer.status(pet_core::agent::AgentKind::ClaudeCode),
+        installer.status(bytepet_core::agent::AgentKind::Codex),
+        installer.status(bytepet_core::agent::AgentKind::ClaudeCode),
     ]
     .into_iter()
     .flatten()
     .collect())
 }
 
-fn parse_agent(name: &str) -> Result<pet_core::agent::AgentKind, String> {
+fn parse_agent(name: &str) -> Result<bytepet_core::agent::AgentKind, String> {
     match name {
-        "codex" => Ok(pet_core::agent::AgentKind::Codex),
-        "claude-code" | "claude" => Ok(pet_core::agent::AgentKind::ClaudeCode),
+        "codex" => Ok(bytepet_core::agent::AgentKind::Codex),
+        "claude-code" | "claude" => Ok(bytepet_core::agent::AgentKind::ClaudeCode),
         other => Err(format!("unknown agent '{other}'")),
     }
 }
 
-fn hook_installer(st: &AppState) -> pet_core::agent::HookInstaller {
+fn hook_installer(st: &AppState) -> bytepet_core::agent::HookInstaller {
     let home = dirs::home_dir().unwrap_or_else(|| st.paths.config_dir.clone());
-    pet_core::agent::HookInstaller::new(home, st.paths.config_dir.clone(), st.config().agent.port)
+    bytepet_core::agent::HookInstaller::new(home, st.paths.config_dir.clone(), st.config().agent.port)
 }
 
 #[tauri::command]
 pub fn install_hooks<R: Runtime>(
     app: AppHandle<R>,
     agent: String,
-) -> Result<pet_core::agent::HookReport, String> {
+) -> Result<bytepet_core::agent::HookReport, String> {
     let st = app_state(&app);
     let kind = parse_agent(&agent)?;
     hook_installer(&st).install(kind).map_err(|e| e.to_string())
@@ -536,7 +536,7 @@ pub fn install_hooks<R: Runtime>(
 pub fn uninstall_hooks<R: Runtime>(
     app: AppHandle<R>,
     agent: String,
-) -> Result<pet_core::agent::HookReport, String> {
+) -> Result<bytepet_core::agent::HookReport, String> {
     let st = app_state(&app);
     let kind = parse_agent(&agent)?;
     hook_installer(&st)

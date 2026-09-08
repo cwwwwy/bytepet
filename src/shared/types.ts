@@ -1,6 +1,6 @@
 /**
  * Types mirrored from the Rust IPC surface (`src-tauri/src/commands.rs` and
- * `pet-core`). Keep in sync by hand — the surface is small and stable.
+ * `bytepet-core`). Keep in sync by hand — the surface is small and stable.
  */
 
 export type PetState =

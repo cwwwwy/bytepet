@@ -7,10 +7,10 @@
 use std::path::Path;
 use std::time::Duration;
 
-use pet_core::agent::hooks::{AgentKind, HookInstaller};
-use pet_core::agent::{spawn_server, AgentEvent, AgentHealth};
-use pet_core::error::Error;
-use pet_core::pet::library::PetLibrary;
+use bytepet_core::agent::hooks::{AgentKind, HookInstaller};
+use bytepet_core::agent::{spawn_server, AgentEvent, AgentHealth};
+use bytepet_core::error::Error;
+use bytepet_core::pet::library::PetLibrary;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
@@ -626,7 +626,7 @@ fn claude_uninstall_removes_the_file_pet_created() {
 fn write_pet(dir: &Path, id: &str) {
     use image::RgbaImage;
     std::fs::create_dir_all(dir).unwrap();
-    let frame = pet_core::pet::manifest::FrameSpec::new(8, 9);
+    let frame = bytepet_core::pet::manifest::FrameSpec::new(8, 9);
     let image = RgbaImage::new(frame.atlas_width(), frame.atlas_height());
     image.save(dir.join("spritesheet.webp")).unwrap();
     let json = format!(

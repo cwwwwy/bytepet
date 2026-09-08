@@ -21,14 +21,14 @@ use serde_json::{json, Value};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
-use pet_core::llm::providers::anthropic::AnthropicProvider;
-use pet_core::llm::providers::openai_chat::OpenAiChatProvider;
-use pet_core::llm::providers::openai_responses::OpenAiResponsesProvider;
-use pet_core::llm::{
+use bytepet_core::llm::providers::anthropic::AnthropicProvider;
+use bytepet_core::llm::providers::openai_chat::OpenAiChatProvider;
+use bytepet_core::llm::providers::openai_responses::OpenAiResponsesProvider;
+use bytepet_core::llm::{
     ChatDelta, ChatMessage, ChatProvider, ChatRequest, ProviderConfig, ProviderKind,
 };
-use pet_core::secrets::{MemorySecretStore, SecretStore};
-use pet_core::Error;
+use bytepet_core::secrets::{MemorySecretStore, SecretStore};
+use bytepet_core::Error;
 
 const API_KEY: &str = "sk-test-secret-do-not-log";
 
@@ -439,8 +439,8 @@ mod cli {
     use std::path::{Path, PathBuf};
 
     use super::*;
-    use pet_core::llm::providers::claude_cli::ClaudeCliProvider;
-    use pet_core::llm::providers::codex_cli::CodexCliProvider;
+    use bytepet_core::llm::providers::claude_cli::ClaudeCliProvider;
+    use bytepet_core::llm::providers::codex_cli::CodexCliProvider;
 
     /// Write an executable that records its argv and stdin, then replays
     /// `fixture` on stdout (one JSON object per line).

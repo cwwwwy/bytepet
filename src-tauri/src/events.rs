@@ -30,8 +30,8 @@ pub struct PetStateEvent {
     pub one_shot: bool,
 }
 
-impl From<&pet_core::agent::AgentEvent> for PetStateEvent {
-    fn from(event: &pet_core::agent::AgentEvent) -> Self {
+impl From<&bytepet_core::agent::AgentEvent> for PetStateEvent {
+    fn from(event: &bytepet_core::agent::AgentEvent) -> Self {
         Self {
             state: event.state.clone(),
             source: event.source.clone(),

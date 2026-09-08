@@ -77,7 +77,7 @@ pub async fn spawn(
             std::io::ErrorKind::AddrInUse => Error::Agent(format!(
                 "port {port} is already in use on 127.0.0.1; another pet instance (or a \
                  different program) is listening there. Start with `--port <other>` or set \
-                 PET_AGENT_PORT."
+                 BYTEPET_AGENT_PORT."
             )),
             std::io::ErrorKind::PermissionDenied => Error::Agent(format!(
                 "not allowed to bind 127.0.0.1:{port} ({err}); ports below 1024 need elevated \

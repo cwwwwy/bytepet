@@ -14,13 +14,13 @@ use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use pet_core::agent::hooks::{AgentKind, HookInstaller, HookReport};
-use pet_core::agent::AgentEvent;
-use pet_core::config::{AppConfig, AppPaths};
-use pet_core::pet::library::{PetEntry, PetLibrary};
+use bytepet_core::agent::hooks::{AgentKind, HookInstaller, HookReport};
+use bytepet_core::agent::AgentEvent;
+use bytepet_core::config::{AppConfig, AppPaths};
+use bytepet_core::pet::library::{PetEntry, PetLibrary};
 
 const DEFAULT_PORT: u16 = 17872;
-const APP_IDENTIFIER: &str = "com.pet.desktop";
+const APP_IDENTIFIER: &str = "com.bytepet.desktop";
 
 #[derive(Parser)]
 #[command(
@@ -31,11 +31,11 @@ const APP_IDENTIFIER: &str = "com.pet.desktop";
 )]
 struct Cli {
     /// Port of the local pet status server.
-    #[arg(long, global = true, default_value_t = DEFAULT_PORT, env = "PET_AGENT_PORT")]
+    #[arg(long, global = true, default_value_t = DEFAULT_PORT, env = "BYTEPET_AGENT_PORT")]
     port: u16,
 
     /// Application data directory (defaults to the Tauri app config dir).
-    #[arg(long, global = true, env = "PET_DATA_DIR", default_value_os_t = default_data_dir())]
+    #[arg(long, global = true, env = "BYTEPET_DATA_DIR", default_value_os_t = default_data_dir())]
     data_dir: PathBuf,
 
     #[command(subcommand)]
@@ -135,12 +135,12 @@ enum PetCommand {
 
 #[derive(Subcommand)]
 enum HooksCommand {
-    /// Install the pet hooks.
+    /// Install the bytepet hooks.
     Install {
         #[arg(value_enum, default_value_t = HookSelection::All)]
         kind: HookSelection,
     },
-    /// Remove the pet hooks and restore the previous config.
+    /// Remove the bytepet hooks and restore the previous config.
     Uninstall {
         #[arg(value_enum, default_value_t = HookSelection::All)]
         kind: HookSelection,
@@ -371,7 +371,7 @@ fn import_any(library: &PetLibrary, path: &Path, overwrite: bool) -> Result<PetE
     )
 }
 
-fn print_validation(report: &pet_core::pet::library::ValidationReport) {
+fn print_validation(report: &bytepet_core::pet::library::ValidationReport) {
     println!(
         "{}: {}",
         if report.ok { "valid" } else { "invalid" },
@@ -472,7 +472,7 @@ fn cmd_doctor(cli: &Cli) -> Result<ExitCode> {
     let library = cli.library();
     let installer = cli.hooks();
 
-    println!("pet doctor");
+    println!("bytepet doctor");
     println!("  data dir    {}", cli.data_dir.display());
     println!(
         "  config      {} ({})",
@@ -587,11 +587,11 @@ fn cmd_doctor(cli: &Cli) -> Result<ExitCode> {
             cli.port
         )
     } else if !active_valid {
-        "run `pet pet list` then `pet pet use <id>` to pick a pet".to_string()
+        "run `bytepet bytepet list` then `pet pet use <id>` to pick a pet".to_string()
     } else if !hooks_installed {
-        "run `pet hooks install all` to forward Codex / Claude Code activity".to_string()
+        "run `bytepet hooks install all` to forward Codex / Claude Code activity".to_string()
     } else {
-        "everything looks good; try `pet state running \"working\"`".to_string()
+        "everything looks good; try `bytepet state running \"working\"`".to_string()
     };
     println!("  next:       {next}");
 
@@ -709,7 +709,7 @@ fn home_dir() -> PathBuf {
 }
 
 /// Same directory Tauri uses for `app_config_dir()` with identifier
-/// `com.pet.desktop` (the CLI cannot depend on `dirs`).
+/// `com.bytepet.desktop` (the CLI cannot depend on `dirs`).
 fn default_data_dir() -> PathBuf {
     config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
