@@ -2,6 +2,11 @@
 //!
 //! Every command is thin: it reads/writes [`crate::state::AppState`] and returns
 //! serialisable data. Model streaming reports back through events.
+//!
+//! Argument convention: most commands take a single `args: XArgs` struct, so the
+//! frontend calls `invoke("cmd", { args: { ... } })`. `save_settings` is the
+//! exception (it takes `config` directly). The typed client in
+//! `src/shared/ipc.ts` also sends the flattened keys, so either shape works.
 
 use pet_core::config::AppConfig;
 use pet_core::llm::ProviderConfig;
