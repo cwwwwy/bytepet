@@ -118,6 +118,7 @@ export CARGO_HOME="$PWD/.cache/cargo"
 - [本地状态协议](docs/PROTOCOL.md)
 - [模型通道](docs/PROVIDERS.md)
 - [架构说明](docs/ARCHITECTURE.md)
+- [Windows 实机验证指南](docs/WINDOWS.md)
 
 ## 已知限制
 
