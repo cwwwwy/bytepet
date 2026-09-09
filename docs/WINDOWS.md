@@ -1,4 +1,7 @@
-# 在 Windows 实机上验证 BytePet
+# 在 Windows 实机上验证与使用 BytePet
+
+> **定位**：Windows 机器用于**验证与日常使用**，不是开发机；开发以 macOS 为主。
+> 因此这里只包含环境准备、门禁脚本与人工验证清单，不涉及跨机开发流程。
 
 macOS 侧已经覆盖了核心逻辑、真实 Codex/Claude CLI 通道、hook 往返与打包；本机还通过
 `cargo xwin check/clippy --target x86_64-pc-windows-msvc` 验证了 Windows 目标能编译、lint 干净。
