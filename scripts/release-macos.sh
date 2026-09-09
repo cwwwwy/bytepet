@@ -21,14 +21,10 @@ pnpm tauri build --target "$TRIPLE" --bundles app,dmg
 
 BUNDLE="target/$TRIPLE/release/bundle"
 DMG="$(ls "$BUNDLE"/dmg/*.dmg | head -1)"
-APP="$(ls -d "$BUNDLE"/macos/*.app | head -1)"
 
 rm -rf "$OUT"
 mkdir -p "$OUT"
 cp "$DMG" "$OUT/"
-# The .app is what the dmg contains; ship it zipped too so users who prefer a
-# plain bundle can drag it out without mounting the image.
-ditto -c -k --sequesterRsrc --keepParent "$APP" "$OUT/BytePet_${VERSION}_universal.app.zip"
 
 echo "== verifying dmg =="
 hdiutil verify "$OUT/$(basename "$DMG")" >/dev/null

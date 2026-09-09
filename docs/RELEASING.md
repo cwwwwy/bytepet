@@ -18,7 +18,7 @@ bash scripts/bump-version.sh 0.2.0 --tag      # 改文件 + 提交 + 打 tag
 
 | 平台 | 命令 | 产物 |
 |---|---|---|
-| macOS（arm64 + Intel 通用） | `bash scripts/release-macos.sh` | `release/BytePet_<ver>_universal.dmg`、`.app.zip`、`SHA256SUMS` |
+| macOS（arm64 + Intel 通用） | `bash scripts/release-macos.sh` | `release/BytePet_<ver>_universal.dmg`、`SHA256SUMS` |
 | Windows（x64） | `powershell -File scripts\release-windows.ps1` | `release\BytePet_<ver>_x64-setup.exe`、`SHA256SUMS` |
 
 Windows 安装包必须在 Windows 上构建（本机无 MSVC 工具链）；macOS 产物在任意 Apple Silicon Mac 上
