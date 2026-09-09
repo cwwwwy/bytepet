@@ -220,7 +220,7 @@ impl HookInstaller {
         let wrapper = self.wrapper_path(kind);
         let wrapper_str = wrapper.to_string_lossy().to_string();
         let text = std::fs::read_to_string(&config_path).unwrap_or_default();
-        let installed = exists && text.contains(&wrapper_str);
+        let installed = exists && text_references_path(&text, &wrapper_str);
         let detail = if !exists {
             format!(
                 "no config at {}; install will create it",
@@ -363,7 +363,7 @@ impl HookInstaller {
         let current = std::fs::read(&config_path).ok();
         let installed = current
             .as_ref()
-            .is_some_and(|bytes| String::from_utf8_lossy(bytes).contains(&wrapper_str));
+            .is_some_and(|bytes| text_references_path(&String::from_utf8_lossy(bytes), &wrapper_str));
 
         if !installed {
             self.remove_wrappers(kind);
@@ -459,7 +459,7 @@ impl HookInstaller {
         let record = self.load_record(kind);
         let already = original
             .as_deref()
-            .is_some_and(|text| text.contains(&wrapper_str));
+            .is_some_and(|text| text_references_path(text, &wrapper_str));
         self.write_wrappers(kind, &[])?;
 
         if already {
@@ -563,7 +563,7 @@ impl HookInstaller {
         let current = std::fs::read(&config_path).ok();
         let installed = current
             .as_ref()
-            .is_some_and(|bytes| String::from_utf8_lossy(bytes).contains(&wrapper_str));
+            .is_some_and(|bytes| text_references_path(&String::from_utf8_lossy(bytes), &wrapper_str));
 
         if !installed {
             self.remove_wrappers(kind);
@@ -929,6 +929,21 @@ fn remove_claude_handlers(root: &mut serde_json::Value, command: &str) -> usize 
         }
     }
     removed
+}
+
+/// Does `text` reference `path`?
+///
+/// Config files escape backslashes (`C:\\dir\\file.cmd` in JSON/TOML), so a
+/// raw substring search for the platform path fails on Windows. Accept the
+/// verbatim form, the backslash-escaped form and the forward-slash form.
+fn text_references_path(text: &str, path: &str) -> bool {
+    if text.contains(path) {
+        return true;
+    }
+    if path.contains('\\') && text.contains(&path.replace('\\', "\\\\")) {
+        return true;
+    }
+    text.contains(&path.replace('\\', "/"))
 }
 
 fn claude_handler_count(text: &str, command: &str) -> usize {
@@ -1420,6 +1435,22 @@ mod tests {
         assert!(root["hooks"].get("Notification").is_none());
         assert_eq!(root["hooks"]["Stop"][0]["hooks"].as_array().unwrap().len(), 1);
         assert_eq!(root["env"]["A"], "1");
+    }
+
+    #[test]
+    fn text_references_path_handles_windows_escaping() {
+        let win = r"C:\Users\me\AppData\Roaming\bytepet\hooks\codex-notify.cmd";
+        assert!(text_references_path(win, win));
+        let escaped = r#""C:\\Users\\me\\AppData\\Roaming\\bytepet\\hooks\\codex-notify.cmd""#;
+        assert!(
+            text_references_path(escaped, win),
+            "JSON/TOML-escaped paths must match"
+        );
+        assert!(text_references_path(
+            "C:/Users/me/AppData/Roaming/bytepet/hooks/codex-notify.cmd",
+            win
+        ));
+        assert!(!text_references_path("/other/path/hook.sh", win));
     }
 
     #[test]

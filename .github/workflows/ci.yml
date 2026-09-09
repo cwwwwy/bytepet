@@ -14,10 +14,13 @@ jobs:
         include:
           - os: macos-latest
             target: aarch64-apple-darwin
+            bundles: app
           - os: macos-15-intel
             target: x86_64-apple-darwin
+            bundles: app
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            bundles: nsis
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -66,7 +69,7 @@ jobs:
         run: pnpm test
 
       - name: Tauri build
-        run: pnpm tauri build
+        run: pnpm tauri build --bundles ${{ matrix.bundles }}
         env:
           # Skip code signing in CI; artifacts are for smoke testing only.
           TAURI_SIGNING_PRIVATE_KEY: ""

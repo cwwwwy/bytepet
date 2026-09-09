@@ -369,10 +369,18 @@ fn codex_install_and_uninstall_round_trip() {
     assert_eq!(record["originalNotify"][0], "/bin/true");
     assert_eq!(record["originalNotify"][1], "x");
     assert_eq!(record["port"], 17872);
-    let script = std::fs::read_to_string(&wrapper).unwrap();
-    assert!(script.contains("'/bin/true'"));
-    assert!(script.contains("'x'"));
-    assert!(script.contains("17872"));
+    // The previous argv and port are baked into the wrapper set (shell on Unix,
+    // PowerShell/cmd on Windows), so inspect the whole directory.
+    let hooks_dir = wrapper.parent().unwrap();
+    let mut wrappers = String::new();
+    for entry in std::fs::read_dir(hooks_dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_file() {
+            wrappers.push_str(&std::fs::read_to_string(&path).unwrap_or_default());
+        }
+    }
+    assert!(wrappers.contains("/bin/true"), "chain must be baked in");
+    assert!(wrappers.contains("17872"), "port must be baked in");
 
     let after = installer.status(AgentKind::Codex).unwrap();
     assert!(after.installed);
