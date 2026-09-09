@@ -158,7 +158,7 @@ export CARGO_HOME="$PWD/.cache/cargo"
 
 | 项目 | 结果 |
 |---|---|
-| `cargo test --workspace` | 129 项全部通过（bytepet-core 89 + 集成 32 + CLI 4 + 示例） |
+| `cargo test --workspace` | 137 项全部通过（bytepet-core 97 + 集成 32 + CLI 4 + 示例） |
 | `pnpm build` / `pnpm test` | 通过（前端 53 项测试） |
 | 真实 Codex 宠物渲染 | `~/.codex/pets/zip`（1536×1872）逐帧播放，帧时长与官方表一致 |
 | 打招呼 → 回落 | waving 行（sprite 24–27）播放后回到 idle |
@@ -171,13 +171,16 @@ export CARGO_HOME="$PWD/.cache/cargo"
 | Claude CLI 通道 | 真实会话跑通（含 reasoning/text 增量与用量） |
 | HTTP 通道 | 三种协议用录制 SSE 回放做集成测试（含取消与 401 脱敏） |
 | 密钥存储 | 已确认写入 macOS 钥匙串（`MacCredential`） |
+| 内置默认宠物 | ByteBot 8×9 图集（1536×1872，8 色，左右跑精确镜像，脚底基线 y=200），生成器确定性可复现 |
+| 全新用户开箱 | 临时 HOME + 空配置目录 + 仅系统 PATH 启动打包版：自动播种 ByteBot、渲染 92 帧、`/health` 显示 `bytepet-default` |
+| 发布产物 | `v0.1.0` 已发布 universal `.dmg` + Windows `x64-setup.exe` + `SHA256SUMS`，匿名下载并校验一致 |
 | Windows 交叉检查 | `cargo xwin check/clippy --target x86_64-pc-windows-msvc --all-targets -D warnings` 全绿（含 tauri、全部 target） |
 | CI（macOS arm64 + Intel） | 全流程通过：pnpm 构建 → Rust 测试 → clippy → 前端测试 → 打包 `.app` |
-| CI（Windows） | Rust 测试已通过；clippy 报出的唯一问题（unix-only 导入）已修复并交叉验证 |
+| CI（Windows） | Rust 测试与 clippy 通过，NSIS 安装包由 `release.yml` 在 CI 产出并附到 Release |
 
-尚未在真机验证、建议手动确认：像素级点击穿透手感、托盘菜单点击、聊天窗中文输入法、系统语音试听、Windows 上的透明窗/穿透/托盘与 NSIS 打包。
+尚未在真机验证、建议手动确认：像素级点击穿透手感、托盘菜单点击、聊天窗中文输入法、系统语音试听、Windows 上的透明窗/穿透/托盘与安装包实机安装（清单见 [docs/WINDOWS.md](docs/WINDOWS.md)）。
 
-> CI 目前无法运行：私有仓库的 Actions 免费额度已耗尽（macOS runner 按 10 倍计费）。工作流本身已就绪，仓库转为 public 或提高 spending limit 后即可直接使用。
+> 仓库已公开，CI 与 `release.yml` 均可免费运行；打 `v*` 标签即自动构建并上传安装包。
 
 > 回归过程中发现并修复：同一 agent 会话内 `running → review` 会被优先级仲裁挡住，导致宠物一直显示“工作中”。现在优先级只在**不同来源**之间仲裁，同一来源可自行推进状态（`pet::state::tests::same_source_can_step_down_but_others_cannot`）。
 
