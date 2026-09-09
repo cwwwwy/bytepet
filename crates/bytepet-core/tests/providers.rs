@@ -17,7 +17,9 @@ use axum::response::Response;
 use axum::Router;
 use futures_util::StreamExt;
 use parking_lot::Mutex;
-use serde_json::{json, Value};
+#[cfg(unix)]
+use serde_json::json;
+use serde_json::Value;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
