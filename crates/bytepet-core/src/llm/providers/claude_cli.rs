@@ -275,7 +275,11 @@ async fn handle_line(
                                 .get("is_error")
                                 .and_then(Value::as_bool)
                                 .unwrap_or(false);
-                            let label = if failed { "工具失败" } else { "工具结果" };
+                            let label = if failed {
+                                "工具失败"
+                            } else {
+                                "工具结果"
+                            };
                             send_delta(
                                 tx,
                                 ChatDelta::Status {
@@ -431,7 +435,9 @@ impl ChatProvider for ClaudeCliProvider {
                     }
                 }
                 Err(error) => {
-                    result = Err(Error::provider(format!("cannot read claude output: {error}")));
+                    result = Err(Error::provider(format!(
+                        "cannot read claude output: {error}"
+                    )));
                     break;
                 }
             }
@@ -553,13 +559,22 @@ mod tests {
         assert_eq!(
             deltas,
             vec![
-                ChatDelta::Status { message: "session:s-1".into() },
+                ChatDelta::Status {
+                    message: "session:s-1".into()
+                },
                 ChatDelta::Reasoning { text: "hmm".into() },
                 ChatDelta::Text { text: "Hel".into() },
                 ChatDelta::Text { text: "lo".into() },
-                ChatDelta::Status { message: "工具结果：ok".into() },
-                ChatDelta::Usage { input_tokens: 11, output_tokens: 2 },
-                ChatDelta::Done { finish_reason: Some("end_turn".into()) },
+                ChatDelta::Status {
+                    message: "工具结果：ok".into()
+                },
+                ChatDelta::Usage {
+                    input_tokens: 11,
+                    output_tokens: 2
+                },
+                ChatDelta::Done {
+                    finish_reason: Some("end_turn".into())
+                },
             ]
         );
     }
@@ -578,9 +593,16 @@ mod tests {
         assert_eq!(
             deltas,
             vec![
-                ChatDelta::Usage { input_tokens: 1, output_tokens: 2 },
-                ChatDelta::Text { text: "Hello there".into() },
-                ChatDelta::Done { finish_reason: Some("end_turn".into()) },
+                ChatDelta::Usage {
+                    input_tokens: 1,
+                    output_tokens: 2
+                },
+                ChatDelta::Text {
+                    text: "Hello there".into()
+                },
+                ChatDelta::Done {
+                    finish_reason: Some("end_turn".into())
+                },
             ]
         );
     }

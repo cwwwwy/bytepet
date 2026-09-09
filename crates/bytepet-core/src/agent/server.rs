@@ -124,7 +124,11 @@ async fn fallback() -> Response {
 }
 
 fn json_error(status: StatusCode, message: impl Into<String>) -> Response {
-    (status, Json(json!({ "ok": false, "error": message.into() }))).into_response()
+    (
+        status,
+        Json(json!({ "ok": false, "error": message.into() })),
+    )
+        .into_response()
 }
 
 /// Decode, validate and fan out one event. Returns the error message on failure.
@@ -134,8 +138,8 @@ fn accept_event(inner: &Inner, bytes: &[u8]) -> std::result::Result<AgentEvent, 
             "request body is too large (max {MAX_BODY_BYTES} bytes)"
         ));
     }
-    let event: AgentEvent = serde_json::from_slice(bytes)
-        .map_err(|err| format!("invalid AgentEvent JSON: {err}"))?;
+    let event: AgentEvent =
+        serde_json::from_slice(bytes).map_err(|err| format!("invalid AgentEvent JSON: {err}"))?;
     event.validate().map_err(|err| err.to_string())?;
     // `try_send` keeps a stuck app from blocking the HTTP/WS endpoint. A full
     // channel is backpressure, not an error for the caller: the event is still

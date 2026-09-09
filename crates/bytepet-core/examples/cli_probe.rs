@@ -19,9 +19,7 @@ use tokio_util::sync::CancellationToken;
 async fn main() -> anyhow::Result<()> {
     let mut args = std::env::args().skip(1);
     let which = args.next().unwrap_or_else(|| "claude".to_string());
-    let prompt = args
-        .next()
-        .unwrap_or_else(|| "回复：你好".to_string());
+    let prompt = args.next().unwrap_or_else(|| "回复：你好".to_string());
 
     let cfg = match which.as_str() {
         "codex" => ProviderConfig::new("codex", ProviderKind::CodexCli, ""),

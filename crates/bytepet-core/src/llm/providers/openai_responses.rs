@@ -142,15 +142,14 @@ async fn handle_event(
 
     match kind {
         "response.output_text.delta" => {
-            let text =
-                json_str(&value, &["delta"]).and_then(|delta| state.text.push_delta(delta));
+            let text = json_str(&value, &["delta"]).and_then(|delta| state.text.push_delta(delta));
             if let Some(text) = text {
                 send_delta(tx, ChatDelta::Text { text }).await?;
             }
         }
         "response.reasoning_summary_text.delta" | "response.reasoning_text.delta" => {
-            let text = json_str(&value, &["delta"])
-                .and_then(|delta| state.reasoning.push_delta(delta));
+            let text =
+                json_str(&value, &["delta"]).and_then(|delta| state.reasoning.push_delta(delta));
             if let Some(text) = text {
                 send_delta(tx, ChatDelta::Reasoning { text }).await?;
             }
@@ -207,11 +206,17 @@ async fn handle_event(
                 .await?;
             }
             state.done = true;
-            send_delta(tx, ChatDelta::Done { finish_reason: None }).await?;
+            send_delta(
+                tx,
+                ChatDelta::Done {
+                    finish_reason: None,
+                },
+            )
+            .await?;
         }
         "response.incomplete" => {
-            let reason =
-                json_str(&value, &["response", "incomplete_details", "reason"]).unwrap_or("incomplete");
+            let reason = json_str(&value, &["response", "incomplete_details", "reason"])
+                .unwrap_or("incomplete");
             if state.text.is_empty() && state.reasoning.is_empty() {
                 return Err(Error::provider(format!(
                     "responses stream incomplete: {reason}"
@@ -227,15 +232,19 @@ async fn handle_event(
             .await?;
         }
         "response.failed" => {
-            let message = json_str(&value, &["response", "error", "message"])
-                .unwrap_or("unknown error");
-            return Err(Error::provider(format!("responses stream failed: {message}")));
+            let message =
+                json_str(&value, &["response", "error", "message"]).unwrap_or("unknown error");
+            return Err(Error::provider(format!(
+                "responses stream failed: {message}"
+            )));
         }
         "error" => {
             let message = json_str(&value, &["message"])
                 .or_else(|| json_str(&value, &["error", "message"]))
                 .unwrap_or("unknown error");
-            return Err(Error::provider(format!("responses stream error: {message}")));
+            return Err(Error::provider(format!(
+                "responses stream error: {message}"
+            )));
         }
         _ => {}
     }
@@ -293,7 +302,13 @@ impl ChatProvider for OpenAiResponsesProvider {
             handle_event(event, &tx, &mut state).await?;
         }
         if !state.done {
-            send_delta(&tx, ChatDelta::Done { finish_reason: None }).await?;
+            send_delta(
+                &tx,
+                ChatDelta::Done {
+                    finish_reason: None,
+                },
+            )
+            .await?;
         }
         Ok(())
     }
@@ -360,8 +375,13 @@ mod tests {
             vec![
                 ChatDelta::Text { text: "Hel".into() },
                 ChatDelta::Text { text: "lo".into() },
-                ChatDelta::Usage { input_tokens: 5, output_tokens: 2 },
-                ChatDelta::Done { finish_reason: None },
+                ChatDelta::Usage {
+                    input_tokens: 5,
+                    output_tokens: 2
+                },
+                ChatDelta::Done {
+                    finish_reason: None
+                },
             ]
         );
     }

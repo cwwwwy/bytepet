@@ -29,13 +29,23 @@ pub fn run() {
         .setup(|app| {
             let state = state::AppState::initialize(app.handle())?;
             app.manage(state);
+            if let Some(st) = app.try_state::<state::AppState>() {
+                match st.ensure_default_pet() {
+                    Ok(Some(id)) => tracing::info!(pet = %id, "seeded the bundled default pet"),
+                    Ok(None) => {}
+                    Err(err) => tracing::warn!(%err, "could not seed the bundled default pet"),
+                }
+            }
             for label in ["pet", "chat"] {
                 let window = app.get_webview_window(label);
                 tracing::debug!(
                     label,
                     exists = window.is_some(),
                     visible = window.as_ref().and_then(|w| w.is_visible().ok()),
-                    url = window.as_ref().and_then(|w| w.url().ok()).map(|u| u.to_string()),
+                    url = window
+                        .as_ref()
+                        .and_then(|w| w.url().ok())
+                        .map(|u| u.to_string()),
                     "window check"
                 );
             }
@@ -47,13 +57,12 @@ pub fn run() {
             window::walk::start(app.handle().clone());
             agent_bridge::start(app.handle().clone());
 
-            // First run with no pet installed: open the chat window so the user
-            // can see what to do instead of staring at nothing.
-            let has_pet = app
+            // First run: open the chat window with the onboarding card.
+            let first_run = app
                 .try_state::<state::AppState>()
-                .map(|s| !s.library.list().is_empty())
+                .map(|s| s.config().first_run)
                 .unwrap_or(false);
-            if !has_pet {
+            if first_run {
                 window::show_chat(app.handle());
             }
 
@@ -113,6 +122,7 @@ pub fn run() {
             commands::uninstall_hooks,
             commands::open_chat,
             commands::hide_chat,
+            commands::complete_onboarding,
             commands::open_data_dir,
             commands::export_logs,
             commands::pet_spritesheet_data_url,
@@ -127,8 +137,9 @@ pub fn run() {
 }
 
 fn init_tracing() {
-    let filter = EnvFilter::try_from_env("BYTEPET_LOG")
-        .unwrap_or_else(|_| EnvFilter::new("info,bytepet_lib=debug,bytepet_app=debug,bytepet_core=debug"));
+    let filter = EnvFilter::try_from_env("BYTEPET_LOG").unwrap_or_else(|_| {
+        EnvFilter::new("info,bytepet_lib=debug,bytepet_app=debug,bytepet_core=debug")
+    });
     let _ = tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_target(false)

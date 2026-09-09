@@ -361,9 +361,9 @@ impl HookInstaller {
         let wrapper_str = wrapper.to_string_lossy().to_string();
         let record = self.load_record(kind);
         let current = std::fs::read(&config_path).ok();
-        let installed = current
-            .as_ref()
-            .is_some_and(|bytes| text_references_path(&String::from_utf8_lossy(bytes), &wrapper_str));
+        let installed = current.as_ref().is_some_and(|bytes| {
+            text_references_path(&String::from_utf8_lossy(bytes), &wrapper_str)
+        });
 
         if !installed {
             self.remove_wrappers(kind);
@@ -396,29 +396,49 @@ impl HookInstaller {
                 _ if !record.config_existed => {
                     let only_ours = current
                         .as_ref()
-                        .and_then(|bytes| String::from_utf8_lossy(bytes).parse::<toml_edit::DocumentMut>().ok())
+                        .and_then(|bytes| {
+                            String::from_utf8_lossy(bytes)
+                                .parse::<toml_edit::DocumentMut>()
+                                .ok()
+                        })
                         .is_some_and(|doc| doc.as_table().len() <= 1);
                     if only_ours {
                         std::fs::remove_file(&config_path)?;
                         messages.push("removed the config file created by pet".to_string());
                     } else {
-                        strip_codex_notify(&config_path, current.as_deref(), record.original_notify.as_deref())?;
+                        strip_codex_notify(
+                            &config_path,
+                            current.as_deref(),
+                            record.original_notify.as_deref(),
+                        )?;
                     }
                 }
                 _ => {
-                    strip_codex_notify(&config_path, current.as_deref(), record.original_notify.as_deref())?;
+                    strip_codex_notify(
+                        &config_path,
+                        current.as_deref(),
+                        record.original_notify.as_deref(),
+                    )?;
                 }
             }
         } else {
             strip_codex_notify(
                 &config_path,
                 current.as_deref(),
-                record.as_ref().and_then(|record| record.original_notify.clone()).as_deref(),
+                record
+                    .as_ref()
+                    .and_then(|record| record.original_notify.clone())
+                    .as_deref(),
             )?;
-            messages.push("config was edited after install; removed only the pet notify entry".to_string());
+            messages.push(
+                "config was edited after install; removed only the pet notify entry".to_string(),
+            );
         }
 
-        if let Some(backup) = record.as_ref().and_then(|record| record.backup_path.clone()) {
+        if let Some(backup) = record
+            .as_ref()
+            .and_then(|record| record.backup_path.clone())
+        {
             let _ = std::fs::remove_file(backup);
         }
         self.remove_wrappers(kind);
@@ -561,9 +581,9 @@ impl HookInstaller {
         let wrapper_str = wrapper.to_string_lossy().to_string();
         let record = self.load_record(kind);
         let current = std::fs::read(&config_path).ok();
-        let installed = current
-            .as_ref()
-            .is_some_and(|bytes| text_references_path(&String::from_utf8_lossy(bytes), &wrapper_str));
+        let installed = current.as_ref().is_some_and(|bytes| {
+            text_references_path(&String::from_utf8_lossy(bytes), &wrapper_str)
+        });
 
         if !installed {
             self.remove_wrappers(kind);
@@ -608,7 +628,10 @@ impl HookInstaller {
             );
         }
 
-        if let Some(backup) = record.as_ref().and_then(|record| record.backup_path.clone()) {
+        if let Some(backup) = record
+            .as_ref()
+            .and_then(|record| record.backup_path.clone())
+        {
             let _ = std::fs::remove_file(backup);
         }
         self.remove_wrappers(kind);
@@ -662,7 +685,11 @@ impl HookInstaller {
     }
 
     fn claude_binary(&self) -> Option<PathBuf> {
-        let name = if cfg!(windows) { "claude.exe" } else { "claude" };
+        let name = if cfg!(windows) {
+            "claude.exe"
+        } else {
+            "claude"
+        };
         let local = self.home.join(".local").join("bin").join(name);
         if local.is_file() {
             return Some(local);
@@ -807,8 +834,12 @@ fn strip_codex_notify(
     let Some(bytes) = current else {
         return Ok(());
     };
-    let text = String::from_utf8(bytes.to_vec())
-        .map_err(|err| Error::Agent(format!("{} is not valid UTF-8: {err}", config_path.display())))?;
+    let text = String::from_utf8(bytes.to_vec()).map_err(|err| {
+        Error::Agent(format!(
+            "{} is not valid UTF-8: {err}",
+            config_path.display()
+        ))
+    })?;
     let mut doc: toml_edit::DocumentMut = text
         .parse()
         .map_err(|err| Error::Agent(format!("cannot parse {}: {err}", config_path.display())))?;
@@ -855,9 +886,9 @@ fn insert_claude_handler(
     if has_groups {
         for item in array.iter_mut() {
             if let Some(handlers) = item.get_mut("hooks").and_then(|value| value.as_array_mut()) {
-                let present = handlers
-                    .iter()
-                    .any(|handler| handler.get("command").and_then(|c| c.as_str()) == Some(command));
+                let present = handlers.iter().any(|handler| {
+                    handler.get("command").and_then(|c| c.as_str()) == Some(command)
+                });
                 if !present {
                     handlers.push(handler_object(command));
                 }
@@ -875,16 +906,16 @@ fn insert_claude_handler(
     }
 }
 
-fn strip_claude_handlers(
-    config_path: &Path,
-    current: Option<&[u8]>,
-    command: &str,
-) -> Result<()> {
+fn strip_claude_handlers(config_path: &Path, current: Option<&[u8]>, command: &str) -> Result<()> {
     let Some(bytes) = current else {
         return Ok(());
     };
-    let text = String::from_utf8(bytes.to_vec())
-        .map_err(|err| Error::Agent(format!("{} is not valid UTF-8: {err}", config_path.display())))?;
+    let text = String::from_utf8(bytes.to_vec()).map_err(|err| {
+        Error::Agent(format!(
+            "{} is not valid UTF-8: {err}",
+            config_path.display()
+        ))
+    })?;
     let mut root: serde_json::Value = serde_json::from_str(&text)
         .map_err(|err| Error::Agent(format!("cannot parse {}: {err}", config_path.display())))?;
     remove_claude_handlers(&mut root, command);
@@ -897,7 +928,10 @@ fn strip_claude_handlers(
 
 /// Remove every handler whose `command` is ours. Returns the number removed.
 fn remove_claude_handlers(root: &mut serde_json::Value, command: &str) -> usize {
-    let Some(hooks) = root.get_mut("hooks").and_then(|value| value.as_object_mut()) else {
+    let Some(hooks) = root
+        .get_mut("hooks")
+        .and_then(|value| value.as_object_mut())
+    else {
         return 0;
     };
     let mut removed = 0;
@@ -917,10 +951,12 @@ fn remove_claude_handlers(root: &mut serde_json::Value, command: &str) -> usize 
         }
         // Drop matcher groups that no longer have any handler. These are
         // containers, so they are not counted as removed handlers.
-        array.retain(|item| match item.get("hooks").and_then(|value| value.as_array()) {
-            Some(handlers) => !handlers.is_empty(),
-            None => true,
-        });
+        array.retain(
+            |item| match item.get("hooks").and_then(|value| value.as_array()) {
+                Some(handlers) => !handlers.is_empty(),
+                None => true,
+            },
+        );
         let before = array.len();
         array.retain(|item| item.get("command").and_then(|c| c.as_str()) != Some(command));
         removed += before - array.len();
@@ -990,7 +1026,10 @@ fn read_text(path: &Path) -> Result<Option<String>> {
             Error::Agent(format!("{} is not valid UTF-8: {err}", path.display()))
         })?)),
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(err) => Err(Error::Agent(format!("cannot read {}: {err}", path.display()))),
+        Err(err) => Err(Error::Agent(format!(
+            "cannot read {}: {err}",
+            path.display()
+        ))),
     }
 }
 
@@ -1056,9 +1095,11 @@ fn parse_semver(text: &str) -> Option<(u64, u64, u64)> {
         else {
             continue;
         };
-        let (Ok(major), Ok(minor), Ok(patch)) =
-            (major.parse::<u64>(), minor.parse::<u64>(), patch.parse::<u64>())
-        else {
+        let (Ok(major), Ok(minor), Ok(patch)) = (
+            major.parse::<u64>(),
+            minor.parse::<u64>(),
+            patch.parse::<u64>(),
+        ) else {
             continue;
         };
         return Some((major, minor, patch));
@@ -1197,9 +1238,13 @@ exit 0
 fn codex_wrapper_script(port: u16, chain: &[String]) -> String {
     let mut out = String::new();
     out.push_str("#!/usr/bin/env bash\n");
-    out.push_str("# Generated by BytePet. Do not edit: `bytepet hooks install codex` regenerates it.\n");
+    out.push_str(
+        "# Generated by BytePet. Do not edit: `bytepet hooks install codex` regenerates it.\n",
+    );
     out.push_str("# Codex `notify` wrapper: forwards the payload to the pet status server, then\n");
-    out.push_str("# chains to the notify command that was configured before pet was installed.\n\n");
+    out.push_str(
+        "# chains to the notify command that was configured before pet was installed.\n\n",
+    );
     out.push_str(&format!("PET_PORT={port}\n"));
     out.push_str("PET_SOURCE='codex'\n");
     out.push_str("PET_STATE_URL=\"http://127.0.0.1:${PET_PORT}/state\"\n\n");
@@ -1220,8 +1265,12 @@ fn claude_wrapper_script(port: u16) -> String {
     let mut out = String::new();
     out.push_str("#!/usr/bin/env bash\n");
     out.push_str("# Generated by BytePet. Do not edit: `bytepet hooks install claude-code` regenerates it.\n");
-    out.push_str("# Claude Code hook wrapper: maps `hook_event_name` to a bytepet state and posts it.\n");
-    out.push_str("# Always exits 0 and prints nothing, so it never blocks or steers Claude Code.\n\n");
+    out.push_str(
+        "# Claude Code hook wrapper: maps `hook_event_name` to a bytepet state and posts it.\n",
+    );
+    out.push_str(
+        "# Always exits 0 and prints nothing, so it never blocks or steers Claude Code.\n\n",
+    );
     out.push_str(&format!("PET_PORT={port}\n"));
     out.push_str("PET_SOURCE='claude-code'\n");
     out.push_str("PET_STATE_URL=\"http://127.0.0.1:${PET_PORT}/state\"\n");
@@ -1232,7 +1281,9 @@ fn claude_wrapper_script(port: u16) -> String {
 
 fn codex_wrapper_ps1(port: u16, chain: &[String]) -> String {
     let mut out = String::new();
-    out.push_str("# Generated by BytePet. Do not edit: `bytepet hooks install codex` regenerates it.\n");
+    out.push_str(
+        "# Generated by BytePet. Do not edit: `bytepet hooks install codex` regenerates it.\n",
+    );
     out.push_str("$ErrorActionPreference = 'SilentlyContinue'\n");
     out.push_str(&format!("$PetPort = {port}\n"));
     out.push_str("$PetSource = 'codex'\n");
@@ -1433,7 +1484,10 @@ mod tests {
         let removed = remove_claude_handlers(&mut root, "/pet/claude-hook.sh");
         assert_eq!(removed, 2);
         assert!(root["hooks"].get("Notification").is_none());
-        assert_eq!(root["hooks"]["Stop"][0]["hooks"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            root["hooks"]["Stop"][0]["hooks"].as_array().unwrap().len(),
+            1
+        );
         assert_eq!(root["env"]["A"], "1");
     }
 
@@ -1456,7 +1510,8 @@ mod tests {
     #[test]
     fn status_is_reported_for_missing_config() {
         let tmp = tempfile::tempdir().unwrap();
-        let installer = HookInstaller::new(tmp.path().to_path_buf(), tmp.path().join("data"), 17872);
+        let installer =
+            HookInstaller::new(tmp.path().to_path_buf(), tmp.path().join("data"), 17872);
         let status = installer.status(AgentKind::Codex).unwrap();
         assert!(!status.exists);
         assert!(!status.installed);

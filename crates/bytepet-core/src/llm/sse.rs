@@ -104,7 +104,9 @@ fn parse_frame(frame: &str) -> Option<SseEvent> {
 pub fn parse_json<T: serde::de::DeserializeOwned>(data: &str) -> Result<T> {
     serde_json::from_str(data).map_err(|e| {
         let snippet: String = data.chars().take(200).collect();
-        crate::error::Error::provider(format!("cannot parse stream payload: {e} (payload: {snippet})"))
+        crate::error::Error::provider(format!(
+            "cannot parse stream payload: {e} (payload: {snippet})"
+        ))
     })
 }
 
@@ -125,7 +127,8 @@ mod tests {
     #[test]
     fn handles_event_names_comments_and_multiline_data() {
         let mut dec = SseDecoder::new();
-        let events = dec.push(": keepalive\n\nevent: content_block_delta\ndata: line1\ndata: line2\n\n");
+        let events =
+            dec.push(": keepalive\n\nevent: content_block_delta\ndata: line1\ndata: line2\n\n");
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].event.as_deref(), Some("content_block_delta"));
         assert_eq!(events[0].data, "line1\nline2");

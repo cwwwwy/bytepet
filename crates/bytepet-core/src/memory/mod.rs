@@ -206,7 +206,11 @@ impl MemoryStore {
         Ok(())
     }
 
-    pub fn create_conversation(&self, persona_id: &str, title: Option<&str>) -> Result<Conversation> {
+    pub fn create_conversation(
+        &self,
+        persona_id: &str,
+        title: Option<&str>,
+    ) -> Result<Conversation> {
         let conn = self.conn.lock();
         let id = uuid::Uuid::new_v4().to_string();
         let now = now_ms();
@@ -354,7 +358,9 @@ impl MemoryStore {
                  FROM summaries WHERE conversation_id = ?1 ORDER BY through_message_id DESC LIMIT 1",
             )
             .map_err(db_err)?;
-        let mut rows = stmt.query(rusqlite::params![conversation_id]).map_err(db_err)?;
+        let mut rows = stmt
+            .query(rusqlite::params![conversation_id])
+            .map_err(db_err)?;
         match rows.next().map_err(db_err)? {
             Some(row) => Ok(Some(Summary {
                 id: row.get(0).map_err(db_err)?,
@@ -502,8 +508,11 @@ impl MemoryStore {
             [persona_id],
         )
         .map_err(db_err)?;
-        conn.execute("DELETE FROM conversations WHERE persona_id = ?1", [persona_id])
-            .map_err(db_err)?;
+        conn.execute(
+            "DELETE FROM conversations WHERE persona_id = ?1",
+            [persona_id],
+        )
+        .map_err(db_err)?;
         Ok(())
     }
 
@@ -511,7 +520,12 @@ impl MemoryStore {
     ///
     /// Uses the FTS5 trigram index (which handles CJK substrings) for queries
     /// of three or more characters and a `LIKE` fallback for shorter ones.
-    pub fn search(&self, persona_id: &str, query: &str, limit: usize) -> Result<Vec<StoredMessage>> {
+    pub fn search(
+        &self,
+        persona_id: &str,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<StoredMessage>> {
         let trimmed = query.trim();
         if trimmed.is_empty() {
             return Ok(Vec::new());

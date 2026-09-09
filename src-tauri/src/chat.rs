@@ -4,15 +4,17 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use parking_lot::Mutex;
 use bytepet_core::chat::{run_turn, summarize_conversation, TurnContext};
 use bytepet_core::llm::{build_provider, ChatDelta, ChatProvider, ProviderConfig};
 use bytepet_core::memory::{MemoryConfig, MemoryStore};
+use parking_lot::Mutex;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
-use crate::events::{ChatDeltaEvent, ChatDoneEvent, ChatErrorEvent, CHAT_DELTA, CHAT_DONE, CHAT_ERROR};
+use crate::events::{
+    ChatDeltaEvent, ChatDoneEvent, ChatErrorEvent, CHAT_DELTA, CHAT_DONE, CHAT_ERROR,
+};
 
 /// Tracks the cancellable turns currently streaming.
 #[derive(Default)]
@@ -72,7 +74,13 @@ impl ChatManager {
                 .personas
                 .get(&conversation.persona_id)
                 .map_err(|e| e.to_string())?
-                .or_else(|| state.personas.list().ok().and_then(|p| p.into_iter().next()))
+                .or_else(|| {
+                    state
+                        .personas
+                        .list()
+                        .ok()
+                        .and_then(|p| p.into_iter().next())
+                })
                 .ok_or("没有可用人格")?;
             let provider_id = persona
                 .model
@@ -220,7 +228,8 @@ impl ChatManager {
                     }
                 }
                 Err(err) => {
-                    let cancelled = matches!(err, bytepet_core::Error::Cancelled) || cancel.is_cancelled();
+                    let cancelled =
+                        matches!(err, bytepet_core::Error::Cancelled) || cancel.is_cancelled();
                     let message = if cancelled {
                         "已取消".to_string()
                     } else {
@@ -262,4 +271,3 @@ fn build_chat_provider<R: Runtime>(
     build_provider(cfg, state.secrets.as_ref())
         .map_err(|e| bytepet_core::secrets::redact(&e.to_string()))
 }
-

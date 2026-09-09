@@ -13,11 +13,11 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
-use clap::{Args, Parser, Subcommand, ValueEnum};
 use bytepet_core::agent::hooks::{AgentKind, HookInstaller, HookReport};
 use bytepet_core::agent::AgentEvent;
 use bytepet_core::config::{AppConfig, AppPaths};
 use bytepet_core::pet::library::{PetEntry, PetLibrary};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 const DEFAULT_PORT: u16 = 17872;
 const APP_IDENTIFIER: &str = "com.bytepet.desktop";
@@ -450,7 +450,11 @@ fn format_report(report: &HookReport) -> String {
     let mut out = format!(
         "{:<12} {}",
         report.kind.label(),
-        if report.installed { "ok" } else { "not installed" }
+        if report.installed {
+            "ok"
+        } else {
+            "not installed"
+        }
     );
     out.push_str(&format!("\n  config  {}", report.config_path.display()));
     if let Some(backup) = &report.backup_path {
@@ -781,7 +785,10 @@ mod tests {
             _ => panic!("expected state"),
         }
         let cli = Cli::try_parse_from(["pet", "pet", "export", "zip", "out.zip"]).unwrap();
-        assert!(matches!(cli.command, Command::Pet(PetCommand::Export { .. })));
+        assert!(matches!(
+            cli.command,
+            Command::Pet(PetCommand::Export { .. })
+        ));
         let cli = Cli::try_parse_from(["pet", "hooks", "install", "claude-code"]).unwrap();
         assert!(matches!(
             cli.command,

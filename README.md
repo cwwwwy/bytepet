@@ -40,19 +40,41 @@
 - **TTS 朗读**：使用系统语音（macOS `say` / Windows SAPI / Linux `spd-say`），可中断、可换音色语速。
 - **托盘 / 单实例 / 开机自启**。
 
-## 快速开始
+## 下载安装（普通用户）
 
-前置：Rust ≥ 1.85、Node ≥ 20、pnpm。
+**不需要安装 Rust / Node / pnpm，也不需要打开终端。**
+
+1. 打开 [Releases](https://github.com/cwwwwy/bytepet/releases/latest)，下载对应安装包：
+   - macOS（Apple Silicon 与 Intel 通用）：`BytePet_x.y.z_universal.dmg`
+   - Windows 64 位：`BytePet_x.y.z_x64-setup.exe`
+2. 安装并打开。内置的像素小伙伴会直接出现在桌面上，首次启动会引导你连接模型。
+3. 连接模型（任选其一，也可先跳过）：
+   - 本机已登录 `codex` 或 `claude` 命令行 → 自动识别，直接可用；
+   - 或在「设置 → 模型服务」填一个 API Key（Claude / OpenAI / DeepSeek）；
+   - 或先只养宠物，之后再配。
+
+| 系统 | 要求 |
+|---|---|
+| macOS | 11.0+（Apple Silicon 或 Intel） |
+| Windows | Windows 10 1809+ / Windows 11，需要 WebView2（Win11 预装，Win10 安装时自动下载） |
+
+> 安装包**未签名**：macOS 首次打开请右键 →「打开」（或执行 `xattr -dr com.apple.quarantine /Applications/BytePet.app`）；Windows 在 SmartScreen 提示时点「更多信息 → 仍要运行」。这是零成本分发方案的已知提示，不影响功能。
+
+## 从源码构建（开发者）
+
+前置：Rust（由 `rust-toolchain.toml` 钉在 1.98.0）、Node ≥ 20、pnpm 12。
 
 ```bash
 git clone https://github.com/cwwwwy/bytepet.git
 cd bytepet
 pnpm install
 pnpm tauri dev          # 开发模式（宠物窗 + 托盘 + 聊天窗）
-pnpm tauri build        # 打包 .app/.dmg（macOS）或 .msi/.exe（Windows）
+pnpm tauri build        # 打包 .app/.dmg（macOS）或 .exe（Windows）
 ```
 
-首次启动会自动扫描 `~/.codex/pets` 与 `~/.unipet/pets`，把找到的第一只宠物显示出来。在托盘菜单或聊天窗里选择宠物、配置模型、创建人格。
+首次启动会按优先级选择宠物：`~/.codex/pets` / `~/.unipet/pets` 里已有的宠物，或应用内置的默认宠物。在托盘菜单或聊天窗里选择宠物、配置模型、创建人格。
+
+发布安装包见 [docs/RELEASING.md](docs/RELEASING.md)。
 
 ### 配置模型
 
@@ -87,21 +109,24 @@ curl -XPOST http://127.0.0.1:17872/state \
 ## 仓库结构
 
 ```
-crates/bytepet-core/    纯 Rust 核心：宠物格式、状态机、模型通道、人格、记忆、协议
-crates/bytepet-cli/     pet 命令行（state / doctor / pet / hooks）
-src-tauri/          Tauri 应用：窗口、托盘、穿透、行走、TTS、IPC
-src/pet/            宠物窗渲染器（canvas，逐帧）
-src/chat/           聊天与设置界面（Preact）
-docs/               格式、协议、模型通道与架构文档
+crates/bytepet-core/          纯 Rust 核心：宠物格式、状态机、模型通道、人格、记忆、协议
+crates/bytepet-core/assets/   内置默认宠物（自研像素图集，随二进制嵌入）
+crates/bytepet-cli/           bytepet 命令行（state / doctor / pet / hooks）
+src-tauri/                    Tauri 应用：窗口、托盘、穿透、行走、TTS、IPC
+src/pet/                      宠物窗渲染器（canvas，逐帧）
+src/chat/                     聊天与设置界面（Preact）
+scripts/                      验证与发布脚本（verify-* / release-* / bump-version）
+docs/                         格式、协议、模型通道、架构、Windows 验证与发布文档
 ```
 
 ## 开发
 
 ```bash
-cargo test --workspace            # Rust 测试
+bash scripts/verify-macos.sh      # 一条命令跑完 CI 的全部关卡
+cargo test --workspace            # 仅 Rust 测试
 cargo clippy --workspace --all-targets -- -D warnings
-pnpm build                        # 前端类型检查 + 打包
-pnpm test                         # 前端测试
+pnpm build && pnpm test           # 前端类型检查、打包与测试
+cargo run -p bytepet-core --example make_default_pet   # 重新生成内置宠物图集
 ```
 
 如果本机 `~/.cargo` 不可写（例如受限沙箱），把 `CARGO_HOME` 指向仓库内目录：
@@ -119,6 +144,7 @@ export CARGO_HOME="$PWD/.cache/cargo"
 - [模型通道](docs/PROVIDERS.md)
 - [架构说明](docs/ARCHITECTURE.md)
 - [Windows 实机验证指南](docs/WINDOWS.md)
+- [发布流程](docs/RELEASING.md)
 
 ## 已知限制
 

@@ -4,11 +4,11 @@
 
 use std::path::Path;
 
-use image::{Rgba, RgbaImage};
 use bytepet_core::pet::library::{PetLibrary, RootKind};
 use bytepet_core::pet::manifest::FrameSpec;
 use bytepet_core::pet::state::PetState;
 use bytepet_core::pet::PetAtlas;
+use image::{Rgba, RgbaImage};
 
 fn write_pet(dir: &Path, manifest_json: &str, frame: FrameSpec, paint: bool) {
     std::fs::create_dir_all(dir).unwrap();
@@ -44,7 +44,10 @@ fn v1_pet_uses_official_timing_and_has_no_look_rows() {
     let entry = PetLibrary::load_entry(&dir, RootKind::AppData).unwrap();
     let idle = entry.animations.get(&PetState::Idle).unwrap();
     assert_eq!(idle.sprites, vec![0, 1, 2, 3, 4, 5]);
-    assert_eq!(idle.durations_ms, vec![280.0, 110.0, 110.0, 140.0, 140.0, 320.0]);
+    assert_eq!(
+        idle.durations_ms,
+        vec![280.0, 110.0, 110.0, 140.0, 140.0, 320.0]
+    );
     assert!(idle.loop_anim);
     assert!(!entry.animations.contains_key(&PetState::LookRow9));
 
@@ -129,7 +132,9 @@ fn rejects_traversal_and_bad_geometry() {
 
     let bad = tmp.path().join("bad");
     std::fs::create_dir_all(&bad).unwrap();
-    RgbaImage::new(100, 100).save(bad.join("spritesheet.webp")).unwrap();
+    RgbaImage::new(100, 100)
+        .save(bad.join("spritesheet.webp"))
+        .unwrap();
     std::fs::write(
         bad.join("pet.json"),
         r#"{"id":"bad","spritesheetPath":"spritesheet.webp"}"#,

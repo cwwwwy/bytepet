@@ -2,12 +2,12 @@
 
 use std::sync::Arc;
 
-use parking_lot::RwLock;
 use bytepet_core::config::{AppConfig, AppPaths};
 use bytepet_core::memory::MemoryStore;
 use bytepet_core::persona::PersonaStore;
 use bytepet_core::pet::PetLibrary;
 use bytepet_core::secrets::{FileSecretStore, KeyringStore, SecretStore};
+use parking_lot::RwLock;
 use tauri::{AppHandle, Manager, Runtime};
 
 use crate::chat::ChatManager;
@@ -61,7 +61,7 @@ impl AppState {
                 .list()
                 .ok()
                 .and_then(|p| p.first().map(|p| p.id.clone()));
-            }
+        }
         if seeded || !paths.config_file.is_file() {
             let _ = config.save(&paths.config_file);
         }
@@ -73,9 +73,7 @@ impl AppState {
                 Err(err) => {
                     tracing::warn!(%err, "OS keychain unavailable, falling back to file secrets");
                     (
-                        Arc::new(FileSecretStore::new(
-                            paths.config_dir.join("secrets.json"),
-                        )?),
+                        Arc::new(FileSecretStore::new(paths.config_dir.join("secrets.json"))?),
                         false,
                     )
                 }
@@ -97,6 +95,25 @@ impl AppState {
             loops_started: std::sync::atomic::AtomicBool::new(false),
             agent_server: RwLock::new(None),
         })
+    }
+
+    /// Seed the bundled default pet exactly once, when the user has no pets.
+    ///
+    /// Returns the id of the pet that was installed, if seeding happened.
+    pub fn ensure_default_pet(&self) -> anyhow::Result<Option<String>> {
+        if self.config().default_pet_seeded {
+            return Ok(None);
+        }
+        let installed =
+            bytepet_core::pet::default_pet::seed_if_empty(&self.library)?.map(|entry| entry.id);
+        let id = installed.clone();
+        self.update_config(|cfg| {
+            cfg.default_pet_seeded = true;
+            if let Some(id) = &id {
+                cfg.active_pet = Some(id.clone());
+            }
+        })?;
+        Ok(installed)
     }
 
     /// The runtime for the pet currently on screen, if any.
@@ -147,7 +164,11 @@ impl AppState {
         let (voice, rate) = match &persona {
             Some(p) if p.tts.enabled || config.tts.enabled => (
                 p.tts.voice.clone().or_else(|| config.tts.voice.clone()),
-                if p.tts.rate > 0.0 { p.tts.rate } else { config.tts.rate },
+                if p.tts.rate > 0.0 {
+                    p.tts.rate
+                } else {
+                    config.tts.rate
+                },
             ),
             Some(_) => return,
             None => (config.tts.voice.clone(), config.tts.rate),

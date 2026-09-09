@@ -86,7 +86,10 @@ async fn post_state_validates_and_forwards_events() {
     assert_eq!(response.status().as_u16(), 400);
 
     // Oversized body (> 16 KiB) -> 400, not 413, with a JSON error body.
-    let huge = format!(r#"{{"source":"codex","state":"idle","message":"{}"}}"#, "x".repeat(20_000));
+    let huge = format!(
+        r#"{{"source":"codex","state":"idle","message":"{}"}}"#,
+        "x".repeat(20_000)
+    );
     let response = client
         .post(format!("{base}/state"))
         .header("content-type", "application/json")
@@ -359,7 +362,10 @@ fn codex_install_and_uninstall_round_trip() {
         text.contains(wrapper.to_str().unwrap()),
         "notify must point at the wrapper: {text}"
     );
-    assert!(!text.contains("\"/bin/true\", \"x\"]"), "notify was replaced");
+    assert!(
+        !text.contains("\"/bin/true\", \"x\"]"),
+        "notify was replaced"
+    );
 
     // The original argv is recorded machine-readably and baked into the wrapper.
     let state: serde_json::Value =
@@ -465,10 +471,7 @@ async fn generated_codex_wrapper_forwards_then_chains() {
     let chain_script = tmp.path().join("previous-notify.sh");
     std::fs::write(
         &chain_script,
-        format!(
-            "#!/bin/sh\nprintf '%s' \"$*\" > '{}'\n",
-            marker.display()
-        ),
+        format!("#!/bin/sh\nprintf '%s' \"$*\" > '{}'\n", marker.display()),
     )
     .unwrap();
     std::fs::set_permissions(&chain_script, std::fs::Permissions::from_mode(0o755)).unwrap();
@@ -487,7 +490,8 @@ async fn generated_codex_wrapper_forwards_then_chains() {
     installer.install(AgentKind::Codex).unwrap();
     let wrapper = installer.wrapper_path(AgentKind::Codex);
 
-    let payload = r#"{"type":"agent-turn-complete","last-assistant-message":"All done \"quoted\" ok"}"#;
+    let payload =
+        r#"{"type":"agent-turn-complete","last-assistant-message":"All done \"quoted\" ok"}"#;
     let status = tokio::process::Command::new(&wrapper)
         .arg(payload)
         .stdin(Stdio::null())
@@ -648,7 +652,9 @@ fn zip_export_import_round_trip() {
     let tmp = tempfile::tempdir().unwrap();
     let library = PetLibrary::discover(tmp.path().join("app-pets"));
     write_pet(&tmp.path().join("src/alpha"), "alpha");
-    let imported = library.import_dir(&tmp.path().join("src/alpha"), false).unwrap();
+    let imported = library
+        .import_dir(&tmp.path().join("src/alpha"), false)
+        .unwrap();
 
     let out = tmp.path().join("alpha.zip");
     library.export_zip("alpha", &out).unwrap();

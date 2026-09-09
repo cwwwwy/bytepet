@@ -263,8 +263,8 @@ impl ChatProvider for OpenAiChatProvider {
                 chunk = stream.next() => chunk,
             };
             let Some(chunk) = chunk else { break };
-            let chunk =
-                chunk.map_err(|e| Error::provider(format!("chat completions stream failed: {e}")))?;
+            let chunk = chunk
+                .map_err(|e| Error::provider(format!("chat completions stream failed: {e}")))?;
             let text = String::from_utf8_lossy(&chunk);
             for event in decoder.push(&text) {
                 handle_event(event, &tx, &mut state).await?;
@@ -349,10 +349,17 @@ mod tests {
         assert_eq!(
             deltas,
             vec![
-                ChatDelta::Reasoning { text: "think".into() },
+                ChatDelta::Reasoning {
+                    text: "think".into()
+                },
                 ChatDelta::Text { text: "Hi".into() },
-                ChatDelta::Done { finish_reason: Some("stop".into()) },
-                ChatDelta::Usage { input_tokens: 9, output_tokens: 2 },
+                ChatDelta::Done {
+                    finish_reason: Some("stop".into())
+                },
+                ChatDelta::Usage {
+                    input_tokens: 9,
+                    output_tokens: 2
+                },
             ]
         );
     }
@@ -374,7 +381,9 @@ mod tests {
         drop(tx);
         assert_eq!(
             rx.recv().await,
-            Some(ChatDelta::Done { finish_reason: None })
+            Some(ChatDelta::Done {
+                finish_reason: None
+            })
         );
     }
 }

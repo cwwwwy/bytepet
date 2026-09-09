@@ -224,7 +224,10 @@ pub fn official_durations(state: PetState) -> Vec<f32> {
 }
 
 /// Build every animation available for the given geometry and manifest.
-pub fn resolve_animations(frame: FrameSpec, manifest: &PetManifest) -> BTreeMap<PetState, Animation> {
+pub fn resolve_animations(
+    frame: FrameSpec,
+    manifest: &PetManifest,
+) -> BTreeMap<PetState, Animation> {
     let mut out = BTreeMap::new();
     for state in PetState::ALL {
         if !frame.has_row(state.requires_row()) {
@@ -237,7 +240,10 @@ pub fn resolve_animations(frame: FrameSpec, manifest: &PetManifest) -> BTreeMap<
     out
 }
 
-fn track_key(manifest: &PetManifest, state: PetState) -> Option<&crate::pet::manifest::AnimationTrack> {
+fn track_key(
+    manifest: &PetManifest,
+    state: PetState,
+) -> Option<&crate::pet::manifest::AnimationTrack> {
     let name = state.name();
     let snake = name.replace('-', "_");
     manifest
@@ -338,10 +344,7 @@ impl PetEngine {
     }
 
     pub fn current(&self) -> PetState {
-        self.active
-            .as_ref()
-            .map(|a| a.state)
-            .unwrap_or(self.base)
+        self.active.as_ref().map(|a| a.state).unwrap_or(self.base)
     }
 
     pub fn base(&self) -> PetState {
@@ -508,9 +511,10 @@ mod tests {
     use super::*;
 
     fn engine(rows: u32) -> PetEngine {
-        let manifest =
-            PetManifest::from_json_str(r#"{"id":"t","displayName":"T","spritesheetPath":"s.webp"}"#)
-                .unwrap();
+        let manifest = PetManifest::from_json_str(
+            r#"{"id":"t","displayName":"T","spritesheetPath":"s.webp"}"#,
+        )
+        .unwrap();
         PetEngine::new(FrameSpec::new(8, rows), &manifest)
     }
 
@@ -566,7 +570,13 @@ mod tests {
             .is_some());
         // waiting outranks running
         assert!(e
-            .raise(PetState::Waiting, "agent:codex", Some("approve".into()), None, now)
+            .raise(
+                PetState::Waiting,
+                "agent:codex",
+                Some("approve".into()),
+                None,
+                now
+            )
             .is_some());
         assert_eq!(e.current(), PetState::Waiting);
         // idle cannot override waiting
@@ -643,8 +653,14 @@ mod tests {
 
     #[test]
     fn parses_state_aliases() {
-        assert_eq!(PetState::from_name("running-right"), Some(PetState::RunningRight));
-        assert_eq!(PetState::from_name("running_right"), Some(PetState::RunningRight));
+        assert_eq!(
+            PetState::from_name("running-right"),
+            Some(PetState::RunningRight)
+        );
+        assert_eq!(
+            PetState::from_name("running_right"),
+            Some(PetState::RunningRight)
+        );
         assert_eq!(PetState::from_name("working"), Some(PetState::Running));
         assert_eq!(PetState::from_name("RUNNING"), Some(PetState::Running));
         assert_eq!(PetState::from_name("look-row-9"), Some(PetState::LookRow9));

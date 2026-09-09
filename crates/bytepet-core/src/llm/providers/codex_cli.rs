@@ -430,7 +430,9 @@ impl ChatProvider for CodexCliProvider {
                     }
                 }
                 Err(error) => {
-                    result = Err(Error::provider(format!("cannot read codex output: {error}")));
+                    result = Err(Error::provider(format!(
+                        "cannot read codex output: {error}"
+                    )));
                     break;
                 }
             }
@@ -473,7 +475,13 @@ impl ChatProvider for CodexCliProvider {
                 "codex produced no output: {stderr_text}"
             )));
         }
-        send_delta(&tx, ChatDelta::Done { finish_reason: None }).await?;
+        send_delta(
+            &tx,
+            ChatDelta::Done {
+                finish_reason: None,
+            },
+        )
+        .await?;
         Ok(())
     }
 }
@@ -502,7 +510,15 @@ mod tests {
             .collect();
         assert_eq!(
             args,
-            vec!["exec", "resume", "abc-123", "--json", "--model", "gpt-5-codex", "-"]
+            vec![
+                "exec",
+                "resume",
+                "abc-123",
+                "--json",
+                "--model",
+                "gpt-5-codex",
+                "-"
+            ]
         );
     }
 
@@ -518,7 +534,13 @@ mod tests {
         assert_eq!(
             args,
             vec![
-                "exec", "--json", "--model", "gpt-5-codex", "--sandbox", "read-only", "-"
+                "exec",
+                "--json",
+                "--model",
+                "gpt-5-codex",
+                "--sandbox",
+                "read-only",
+                "-"
             ]
         );
     }
@@ -548,10 +570,15 @@ mod tests {
         assert_eq!(
             deltas,
             vec![
-                ChatDelta::Status { message: "session:t-1".into() },
+                ChatDelta::Status {
+                    message: "session:t-1".into()
+                },
                 ChatDelta::Reasoning { text: "why".into() },
                 ChatDelta::Text { text: "hi".into() },
-                ChatDelta::Usage { input_tokens: 3, output_tokens: 1 },
+                ChatDelta::Usage {
+                    input_tokens: 3,
+                    output_tokens: 1
+                },
             ]
         );
     }

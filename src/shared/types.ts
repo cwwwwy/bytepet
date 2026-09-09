@@ -170,6 +170,8 @@ export interface BootstrapState {
   agentUrl: string;
   dataDir: string;
   keyringAvailable: boolean;
+  /** Show the first-run onboarding card once. */
+  onboarding: boolean;
 }
 
 export interface PetStateEvent {

@@ -116,9 +116,7 @@ impl ProviderConfig {
         Self {
             label: kind.label().to_string(),
             base_url: kind.default_base_url().map(|s| s.to_string()),
-            api_key_ref: kind
-                .needs_api_key()
-                .then(|| format!("provider/{id}")),
+            api_key_ref: kind.needs_api_key().then(|| format!("provider/{id}")),
             id,
             kind,
             model: model.into(),
@@ -209,11 +207,17 @@ impl ChatRequest {
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum ChatDelta {
     /// Visible assistant text.
-    Text { text: String },
+    Text {
+        text: String,
+    },
     /// Chain-of-thought / reasoning text (only shown when enabled).
-    Reasoning { text: String },
+    Reasoning {
+        text: String,
+    },
     /// Progress narration, e.g. "调用工具：bash".
-    Status { message: String },
+    Status {
+        message: String,
+    },
     Usage {
         input_tokens: u32,
         output_tokens: u32,

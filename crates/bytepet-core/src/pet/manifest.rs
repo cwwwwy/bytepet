@@ -113,7 +113,8 @@ pub struct AnimationTrack {
 /// Parsed `pet.json`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PetManifest {    pub id: String,
+pub struct PetManifest {
+    pub id: String,
 
     #[serde(default)]
     pub display_name: Option<String>,
@@ -184,9 +185,8 @@ impl PetManifest {
     }
 
     pub fn load(path: &Path) -> Result<Self> {
-        let bytes = std::fs::read(path).map_err(|e| {
-            Error::manifest(format!("cannot read {}: {e}", path.display()))
-        })?;
+        let bytes = std::fs::read(path)
+            .map_err(|e| Error::manifest(format!("cannot read {}: {e}", path.display())))?;
         // Strip a UTF-8 BOM if present: some exporters write one.
         let bytes = bytes
             .strip_prefix(&[0xEF, 0xBB, 0xBF])
@@ -250,7 +250,9 @@ impl PetManifest {
             return Ok((declared, warnings));
         }
         if declared.width == 0 || declared.height == 0 {
-            return Err(Error::manifest("frame width/height must be greater than zero"));
+            return Err(Error::manifest(
+                "frame width/height must be greater than zero",
+            ));
         }
         if image_w.is_multiple_of(declared.width) && image_h.is_multiple_of(declared.height) {
             let inferred = FrameSpec {

@@ -23,6 +23,7 @@ import { ChatPane } from "./components/ChatPane";
 import { Sidebar } from "./components/Sidebar";
 import { SettingsView } from "./components/SettingsView";
 import { confirmAction, DialogHost } from "./components/Confirm";
+import { Onboarding } from "./components/Onboarding";
 import { ToastHost, toast } from "./components/Toast";
 import { IconClose, IconMenu, IconPlus } from "./components/icons";
 import { settingsTabLabelKey, type SettingsTab, type View } from "./view";
@@ -382,6 +383,13 @@ export function App() {
 
       <ToastHost />
       <DialogHost />
+
+      {boot.onboarding ? (
+        <Onboarding
+          onOpenProviders={() => openSettings("provider")}
+          onDismiss={() => setBoot((current) => (current ? { ...current, onboarding: false } : current))}
+        />
+      ) : null}
     </div>
   );
 }

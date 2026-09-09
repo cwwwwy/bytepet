@@ -36,10 +36,7 @@ impl From<&bytepet_core::agent::AgentEvent> for PetStateEvent {
             state: event.state.clone(),
             source: event.source.clone(),
             message: event.message.clone(),
-            one_shot: event
-                .pet_state()
-                .map(|s| s.is_one_shot())
-                .unwrap_or(false),
+            one_shot: event.pet_state().map(|s| s.is_one_shot()).unwrap_or(false),
         }
     }
 }

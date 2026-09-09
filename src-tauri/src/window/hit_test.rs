@@ -10,10 +10,10 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use std::time::Duration;
 
-use parking_lot::Mutex;
 use bytepet_core::config::ClickThroughMode;
 use bytepet_core::pet::atlas::AlphaMask;
 use bytepet_core::pet::manifest::FrameSpec;
+use parking_lot::Mutex;
 use tauri::{AppHandle, Manager};
 
 /// Cursor polling interval. 30 Hz is invisible to the user and cheap.

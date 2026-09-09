@@ -121,6 +121,18 @@ impl PetLibrary {
         Self { roots }
     }
 
+    /// A library with one writable root and no Codex/UniPet scanning. Used by
+    /// tests and tooling that must not touch the user's own libraries.
+    pub fn single_root(app_pets_dir: PathBuf) -> Self {
+        Self {
+            roots: vec![LibraryRoot {
+                kind: RootKind::AppData,
+                path: app_pets_dir,
+                writable: true,
+            }],
+        }
+    }
+
     pub fn with_extra_root(mut self, path: PathBuf) -> Self {
         self.roots.push(LibraryRoot {
             kind: RootKind::Custom,

@@ -403,6 +403,17 @@ const zhCN: Record<string, string> = {
     "跨平台桌宠，兼容 Codex pet 精灵图格式，支持 LLM 流式对话、自定义人格与长期记忆。",
   "about.builtWith": "技术栈",
   "about.license": "许可证",
+  // --- onboarding ---------------------------------------------------------
+  "onboarding.title": "欢迎使用 BytePet",
+  "onboarding.subtitle": "宠物已经在你桌面上了。花一分钟接上大模型，就能开始聊天。",
+  "onboarding.step1.title": "宠物已就绪",
+  "onboarding.step1.body": "内置的像素小伙伴正在屏幕上，可以拖动它，点一下就能打开聊天窗。",
+  "onboarding.step2.title": "连接模型",
+  "onboarding.step2.body": "填一个 API Key（Claude / OpenAI / DeepSeek），或者直接复用本机已登录的 codex / claude 命令行。",
+  "onboarding.step3.title": "可选：换成你自己的桌宠",
+  "onboarding.step3.body": "在「设置 → 宠物」里可以导入 Codex 桌宠，或直接使用 ~/.codex/pets 里已有的。",
+  "onboarding.connect": "连接模型",
+  "onboarding.later": "稍后再说",
 };
 
 const en: Record<string, string> = {
@@ -799,6 +810,17 @@ const en: Record<string, string> = {
     "A cross-platform desktop pet compatible with the Codex pet sprite format, with streaming LLM chat, custom personas and long-term memory.",
   "about.builtWith": "Built with",
   "about.license": "License",
+  // --- onboarding ---------------------------------------------------------
+  "onboarding.title": "Welcome to BytePet",
+  "onboarding.subtitle": "Your pet is already on screen. Connect a model to start chatting.",
+  "onboarding.step1.title": "Your pet is ready",
+  "onboarding.step1.body": "The bundled pixel buddy is on your desktop — drag it around, or click it to open the chat.",
+  "onboarding.step2.title": "Connect a model",
+  "onboarding.step2.body": "Paste an API key (Claude / OpenAI / DeepSeek), or reuse the codex / claude CLI already signed in on this machine.",
+  "onboarding.step3.title": "Optional: bring your own pet",
+  "onboarding.step3.body": "Settings → Pets can import a Codex pet, or use the ones already in ~/.codex/pets.",
+  "onboarding.connect": "Connect a model",
+  "onboarding.later": "Later",
 };
 
 const DICTIONARIES: Record<Language, Record<string, string>> = {

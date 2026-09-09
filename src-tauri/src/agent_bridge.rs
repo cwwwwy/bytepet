@@ -62,19 +62,23 @@ fn install_hooks_quietly(app: &AppHandle, port: u16) {
         return;
     };
     let home = dirs::home_dir().unwrap_or_else(|| state.paths.config_dir.clone());
-    let installer = bytepet_core::agent::HookInstaller::new(home, state.paths.config_dir.clone(), port);
+    let installer =
+        bytepet_core::agent::HookInstaller::new(home, state.paths.config_dir.clone(), port);
     for kind in [
         bytepet_core::agent::AgentKind::Codex,
         bytepet_core::agent::AgentKind::ClaudeCode,
     ] {
         match installer.install(kind) {
-            Ok(report) => tracing::info!(agent = kind.label(), ?report.messages, "agent hooks installed"),
+            Ok(report) => {
+                tracing::info!(agent = kind.label(), ?report.messages, "agent hooks installed")
+            }
             Err(err) => tracing::warn!(agent = kind.label(), %err, "agent hook install skipped"),
         }
     }
 }
 
-fn health(app: &AppHandle) -> AgentHealth {    let mut health = AgentHealth {
+fn health(app: &AppHandle) -> AgentHealth {
+    let mut health = AgentHealth {
         ok: true,
         version: env!("CARGO_PKG_VERSION").to_string(),
         pet: None,

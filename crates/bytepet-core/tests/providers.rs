@@ -124,7 +124,9 @@ fn provider_config(kind: ProviderKind, base_url: &str) -> ProviderConfig {
 
 fn secrets() -> MemorySecretStore {
     let secrets = MemorySecretStore::new();
-    secrets.set("provider/test", API_KEY).expect("store api key");
+    secrets
+        .set("provider/test", API_KEY)
+        .expect("store api key");
     secrets
 }
 
@@ -236,9 +238,7 @@ async fn openai_chat_maps_sse_and_sends_expected_body() {
     )
     .await;
     let mut config = provider_config(ProviderKind::OpenAiChat, &base);
-    config
-        .extra_headers
-        .insert("x-tenant".into(), "pet".into());
+    config.extra_headers.insert("x-tenant".into(), "pet".into());
     let provider: Arc<dyn ChatProvider> =
         Arc::new(OpenAiChatProvider::new(&config, &secrets()).expect("provider"));
 
@@ -373,8 +373,11 @@ async fn cancelling_token_stops_http_stream_within_200ms() {
     )
     .await;
     let provider: Arc<dyn ChatProvider> = Arc::new(
-        OpenAiChatProvider::new(&provider_config(ProviderKind::OpenAiChat, &base), &secrets())
-            .expect("provider"),
+        OpenAiChatProvider::new(
+            &provider_config(ProviderKind::OpenAiChat, &base),
+            &secrets(),
+        )
+        .expect("provider"),
     );
 
     let (tx, mut rx) = mpsc::channel(16);
@@ -392,12 +395,7 @@ async fn cancelling_token_stops_http_stream_within_200ms() {
         .await
         .expect("first delta arrives")
         .expect("delta");
-    assert_eq!(
-        first,
-        ChatDelta::Text {
-            text: "hi".into()
-        }
-    );
+    assert_eq!(first, ChatDelta::Text { text: "hi".into() });
 
     let started = Instant::now();
     cancel.cancel();
@@ -481,9 +479,7 @@ mod cli {
         config
             .options
             .insert("binary".into(), json!(script.display().to_string()));
-        config
-            .options
-            .insert("sandbox".into(), json!("read-only"));
+        config.options.insert("sandbox".into(), json!("read-only"));
         config
     }
 
@@ -499,9 +495,8 @@ mod cli {
     async fn codex_cli_replays_fixture_and_feeds_prompt_on_stdin() {
         let dir = tempfile::tempdir().expect("temp dir");
         let script = fake_cli(dir.path(), include_str!("fixtures/cli/codex-exec.jsonl"));
-        let provider: Arc<dyn ChatProvider> = Arc::new(
-            CodexCliProvider::new(&codex_config(&script)).expect("provider"),
-        );
+        let provider: Arc<dyn ChatProvider> =
+            Arc::new(CodexCliProvider::new(&codex_config(&script)).expect("provider"));
 
         let mut request = ChatRequest::new("gpt-5-codex", "be nice");
         request.messages.push(ChatMessage::user("hi"));
@@ -599,19 +594,14 @@ mod cli {
                 "{\"type\":\"item.completed\",\"item\":{\"id\":\"i1\",\"type\":\"agent_message\",\"text\":\"Hello\"}}\n",
             ),
         );
-        let provider: Arc<dyn ChatProvider> = Arc::new(
-            CodexCliProvider::new(&codex_config(&script)).expect("provider"),
-        );
+        let provider: Arc<dyn ChatProvider> =
+            Arc::new(CodexCliProvider::new(&codex_config(&script)).expect("provider"));
         let deltas = collect(provider, ChatRequest::new("gpt-5-codex", "sys")).await;
         assert_eq!(
             deltas,
             vec![
-                ChatDelta::Text {
-                    text: "Hel".into()
-                },
-                ChatDelta::Text {
-                    text: "lo".into()
-                },
+                ChatDelta::Text { text: "Hel".into() },
+                ChatDelta::Text { text: "lo".into() },
                 ChatDelta::Done {
                     finish_reason: None
                 },
@@ -622,7 +612,11 @@ mod cli {
     #[tokio::test]
     async fn codex_cli_enforces_timeout() {
         let dir = tempfile::tempdir().expect("temp dir");
-        let script = executable(dir.path(), "slow-cli", "#!/bin/sh\ncat > /dev/null\nsleep 30\n");
+        let script = executable(
+            dir.path(),
+            "slow-cli",
+            "#!/bin/sh\ncat > /dev/null\nsleep 30\n",
+        );
         let mut config = codex_config(&script);
         config.options.insert("timeoutSecs".into(), json!(1));
         let provider: Arc<dyn ChatProvider> =
@@ -642,9 +636,8 @@ mod cli {
             "hang-cli",
             "#!/bin/sh\ncat > /dev/null\necho '{\"type\":\"agent_message_delta\",\"delta\":\"hi\"}'\nsleep 30\n",
         );
-        let provider: Arc<dyn ChatProvider> = Arc::new(
-            CodexCliProvider::new(&codex_config(&script)).expect("provider"),
-        );
+        let provider: Arc<dyn ChatProvider> =
+            Arc::new(CodexCliProvider::new(&codex_config(&script)).expect("provider"));
 
         let (tx, mut rx) = mpsc::channel(16);
         let cancel = CancellationToken::new();
@@ -660,12 +653,7 @@ mod cli {
             .await
             .expect("delta arrives")
             .expect("delta");
-        assert_eq!(
-            first,
-            ChatDelta::Text {
-                text: "hi".into()
-            }
-        );
+        assert_eq!(first, ChatDelta::Text { text: "hi".into() });
         cancel.cancel();
         let result = tokio::time::timeout(Duration::from_millis(200), handle)
             .await
@@ -681,7 +669,8 @@ mod cli {
     async fn claude_cli_replays_real_fixture_without_duplication() {
         let dir = tempfile::tempdir().expect("temp dir");
         let script = fake_cli(dir.path(), include_str!("fixtures/cli/claude-stream.jsonl"));
-        let mut config = ProviderConfig::new("claude", ProviderKind::ClaudeCli, "claude-sonnet-4-5");
+        let mut config =
+            ProviderConfig::new("claude", ProviderKind::ClaudeCli, "claude-sonnet-4-5");
         config
             .options
             .insert("binary".into(), json!(script.display().to_string()));

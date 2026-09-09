@@ -46,7 +46,11 @@ pub fn start<R: Runtime>(app: AppHandle<R>) {
                 let engine = runtime.engine.lock();
                 engine.current() != engine.base()
             };
-            if busy || runtime.walk.recently_interacted(walk_cfg.user_grace_seconds) {
+            if busy
+                || runtime
+                    .walk
+                    .recently_interacted(walk_cfg.user_grace_seconds)
+            {
                 set_base(&app, &runtime, PetState::Idle);
                 continue;
             }
@@ -66,13 +70,16 @@ pub fn start<R: Runtime>(app: AppHandle<R>) {
                 continue;
             };
             let Some(monitor) = monitor else { continue };
-            let Ok(pos) = win.outer_position() else { continue };
+            let Ok(pos) = win.outer_position() else {
+                continue;
+            };
             let Ok(size) = win.outer_size() else { continue };
             let scale = monitor.scale_factor();
 
             let margin = (walk_cfg.edge_margin.max(0.0) as f64 * scale) as i32;
             let min_x = monitor.position().x + margin;
-            let max_x = monitor.position().x + monitor.size().width as i32 - size.width as i32 - margin;
+            let max_x =
+                monitor.position().x + monitor.size().width as i32 - size.width as i32 - margin;
             if max_x <= min_x {
                 set_base(&app, &runtime, PetState::Idle);
                 continue;

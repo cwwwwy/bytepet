@@ -62,9 +62,8 @@ fn build_app() -> tauri::App<tauri::test::MockRuntime> {
 async fn send_message_streams_persists_and_reports_usage() {
     let tmp = tempfile::tempdir().unwrap();
     let app = build_app();
-    let mut state =
-        bytepet_lib::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
-            .expect("app state");
+    let mut state = bytepet_lib::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
+        .expect("app state");
 
     // Point the provider at the mock and keep the key out of the keychain.
     let base_url = mock_openai().await;
@@ -89,8 +88,8 @@ async fn send_message_streams_persists_and_reports_usage() {
         .unwrap();
     app.manage(state);
 
-    let conversation =
-        bytepet_lib::commands::create_conversation(app.handle().clone(), None).expect("conversation");
+    let conversation = bytepet_lib::commands::create_conversation(app.handle().clone(), None)
+        .expect("conversation");
     bytepet_lib::commands::send_message(
         app.handle().clone(),
         conversation.id.clone(),
@@ -126,9 +125,8 @@ async fn send_message_streams_persists_and_reports_usage() {
 async fn send_message_without_provider_fails_without_persisting_assistant() {
     let tmp = tempfile::tempdir().unwrap();
     let app = build_app();
-    let state =
-        bytepet_lib::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
-            .expect("app state");
+    let state = bytepet_lib::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
+        .expect("app state");
     // No providers configured at all.
     state
         .update_config(|cfg| {
@@ -138,34 +136,49 @@ async fn send_message_without_provider_fails_without_persisting_assistant() {
         .unwrap();
     app.manage(state);
 
-    let conversation =
-        bytepet_lib::commands::create_conversation(app.handle().clone(), None).expect("conversation");
+    let conversation = bytepet_lib::commands::create_conversation(app.handle().clone(), None)
+        .expect("conversation");
     let err = bytepet_lib::commands::send_message(
         app.handle().clone(),
         conversation.id.clone(),
         "在吗".to_string(),
     )
     .expect_err("should reject when no provider is configured");
-    assert!(err.contains("模型服务") || err.contains("provider"), "got: {err}");
+    assert!(
+        err.contains("模型服务") || err.contains("provider"),
+        "got: {err}"
+    );
 
     let state = app.state::<bytepet_lib::state::AppState>();
-    assert!(state.memory.messages(&conversation.id, 10).unwrap().is_empty());
+    assert!(state
+        .memory
+        .messages(&conversation.id, 10)
+        .unwrap()
+        .is_empty());
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn bootstrap_state_exposes_pets_personas_and_settings() {
     let tmp = tempfile::tempdir().unwrap();
     let app = build_app();
-    let state =
-        bytepet_lib::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
-            .expect("app state");
+    let state = bytepet_lib::state::AppState::initialize_with_dir(tmp.path().to_path_buf())
+        .expect("app state");
     app.manage(state);
 
     let boot = bytepet_lib::commands::get_bootstrap_state(app.handle().clone()).expect("bootstrap");
-    assert_eq!(boot.config.schema_version, bytepet_core::config::CONFIG_SCHEMA_VERSION);
+    assert_eq!(
+        boot.config.schema_version,
+        bytepet_core::config::CONFIG_SCHEMA_VERSION
+    );
     assert!(!boot.personas.is_empty(), "a default persona is seeded");
-    assert_eq!(boot.agent_url, format!("http://127.0.0.1:{}", boot.config.agent.port));
+    assert_eq!(
+        boot.agent_url,
+        format!("http://127.0.0.1:{}", boot.config.agent.port)
+    );
     assert!(boot.data_dir.starts_with(tmp.path()));
     // No pet is installed in the temp library, and none must be invented.
-    assert!(boot.pets.iter().all(|p| p.root != bytepet_core::pet::RootKind::AppData));
+    assert!(boot
+        .pets
+        .iter()
+        .all(|p| p.root != bytepet_core::pet::RootKind::AppData));
 }

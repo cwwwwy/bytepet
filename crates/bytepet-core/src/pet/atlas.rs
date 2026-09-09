@@ -161,9 +161,8 @@ impl PetAtlas {
     pub fn open(pet_dir: &Path, manifest: &PetManifest) -> Result<(Self, Vec<String>)> {
         let rel = safe_relative_path(&manifest.spritesheet_rel())?;
         let path = pet_dir.join(&rel);
-        let meta = std::fs::metadata(&path).map_err(|e| {
-            Error::atlas(format!("spritesheet {} is missing: {e}", path.display()))
-        })?;
+        let meta = std::fs::metadata(&path)
+            .map_err(|e| Error::atlas(format!("spritesheet {} is missing: {e}", path.display())))?;
         if !meta.is_file() {
             return Err(Error::atlas(format!(
                 "spritesheet {} is not a file",
@@ -259,9 +258,12 @@ mod tests {
     #[test]
     fn sprite_index_matches_codex_layout() {
         let frame = FrameSpec::default();
-        let atlas =
-            PetAtlas::from_image(RgbaImage::new(frame.atlas_width(), frame.atlas_height()), frame, PathBuf::from("x"))
-                .unwrap();
+        let atlas = PetAtlas::from_image(
+            RgbaImage::new(frame.atlas_width(), frame.atlas_height()),
+            frame,
+            PathBuf::from("x"),
+        )
+        .unwrap();
         assert_eq!(atlas.sprite_index(0, 0), 0);
         assert_eq!(atlas.sprite_index(1, 0), 8);
         assert_eq!(atlas.sprite_index(4, 3), 35);

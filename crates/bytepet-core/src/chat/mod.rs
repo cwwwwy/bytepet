@@ -234,7 +234,11 @@ mod tests {
                 return Err(Error::provider("boom"));
             }
             for chunk in self.text.chars() {
-                let _ = tx.send(ChatDelta::Text { text: chunk.to_string() }).await;
+                let _ = tx
+                    .send(ChatDelta::Text {
+                        text: chunk.to_string(),
+                    })
+                    .await;
             }
             let _ = tx
                 .send(ChatDelta::Usage {

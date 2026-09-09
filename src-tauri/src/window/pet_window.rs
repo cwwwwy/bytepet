@@ -4,10 +4,10 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
-use parking_lot::Mutex;
 use bytepet_core::config::AppConfig;
 use bytepet_core::pet::state::{PetEngine, PetState};
 use bytepet_core::pet::{PetAtlas, PetEntry};
+use parking_lot::Mutex;
 use tauri::{AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, Runtime};
 
 use super::hit_test::HitState;
@@ -124,7 +124,11 @@ pub fn activate_active_pet<R: Runtime>(app: &AppHandle<R>) -> anyhow::Result<()>
 }
 
 /// Apply pet-window geometry and behaviour from config.
-pub fn apply_config<R: Runtime>(app: &AppHandle<R>, config: &AppConfig, frame: bytepet_core::pet::FrameSpec) {
+pub fn apply_config<R: Runtime>(
+    app: &AppHandle<R>,
+    config: &AppConfig,
+    frame: bytepet_core::pet::FrameSpec,
+) {
     let Some(win) = app.get_webview_window("pet") else {
         return;
     };
@@ -197,10 +201,11 @@ pub fn raise_state<R: Runtime>(
     let Some(runtime) = app_state.pet_runtime() else {
         return;
     };
-    let transition = runtime
-        .engine
-        .lock()
-        .raise(state, source, message, ttl, std::time::Instant::now());
+    let transition =
+        runtime
+            .engine
+            .lock()
+            .raise(state, source, message, ttl, std::time::Instant::now());
     if let Some(transition) = transition {
         let _ = app.emit(
             crate::events::PET_STATE,

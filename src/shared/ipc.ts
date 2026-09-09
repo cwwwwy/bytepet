@@ -189,6 +189,7 @@ export const ipc = {
   saveSettings: (config: AppConfig) => invokeCommand<AppConfig>("save_settings", { config }),
 
   // windows / pet / tts ---------------------------------------------------
+  completeOnboarding: () => invokeCommand<AppConfig>("complete_onboarding"),
   openChat: () => invokeCommand<void>("open_chat"),
   hideChat: () => invokeCommand<void>("hide_chat"),
   setPetState: (state: string, message?: string, ttlMs?: number) =>

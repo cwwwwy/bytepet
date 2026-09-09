@@ -145,17 +145,29 @@ async fn handle_event(
             // Real streams start blocks empty, but a gateway that inlines the
             // first chunk here must not lose it.
             Some("text") => {
-                let text = json_str(&value, &["content_block", "text"])
-                    .filter(|text| !text.is_empty());
+                let text =
+                    json_str(&value, &["content_block", "text"]).filter(|text| !text.is_empty());
                 if let Some(text) = text {
-                    send_delta(tx, ChatDelta::Text { text: text.to_string() }).await?;
+                    send_delta(
+                        tx,
+                        ChatDelta::Text {
+                            text: text.to_string(),
+                        },
+                    )
+                    .await?;
                 }
             }
             Some("thinking") => {
                 let text = json_str(&value, &["content_block", "thinking"])
                     .filter(|text| !text.is_empty());
                 if let Some(text) = text {
-                    send_delta(tx, ChatDelta::Reasoning { text: text.to_string() }).await?;
+                    send_delta(
+                        tx,
+                        ChatDelta::Reasoning {
+                            text: text.to_string(),
+                        },
+                    )
+                    .await?;
                 }
             }
             Some("tool_use") => {
@@ -173,12 +185,24 @@ async fn handle_event(
         "content_block_delta" => match json_str(&value, &["delta", "type"]) {
             Some("text_delta") => {
                 if let Some(text) = json_str(&value, &["delta", "text"]) {
-                    send_delta(tx, ChatDelta::Text { text: text.to_string() }).await?;
+                    send_delta(
+                        tx,
+                        ChatDelta::Text {
+                            text: text.to_string(),
+                        },
+                    )
+                    .await?;
                 }
             }
             Some("thinking_delta") => {
                 if let Some(text) = json_str(&value, &["delta", "thinking"]) {
-                    send_delta(tx, ChatDelta::Reasoning { text: text.to_string() }).await?;
+                    send_delta(
+                        tx,
+                        ChatDelta::Reasoning {
+                            text: text.to_string(),
+                        },
+                    )
+                    .await?;
                 }
             }
             // `input_json_delta` streams tool arguments; nothing to render.
@@ -268,7 +292,8 @@ impl ChatProvider for AnthropicProvider {
                 chunk = stream.next() => chunk,
             };
             let Some(chunk) = chunk else { break };
-            let chunk = chunk.map_err(|e| Error::provider(format!("anthropic stream failed: {e}")))?;
+            let chunk =
+                chunk.map_err(|e| Error::provider(format!("anthropic stream failed: {e}")))?;
             let text = String::from_utf8_lossy(&chunk);
             for event in decoder.push(&text) {
                 handle_event(event, &tx, &mut state).await?;
@@ -307,7 +332,9 @@ mod tests {
     fn body_uses_default_max_tokens_and_splits_system() {
         let mut request = ChatRequest::new("claude-x", "be nice");
         request.messages.push(crate::llm::ChatMessage::user("hi"));
-        request.messages.push(crate::llm::ChatMessage::assistant("hello"));
+        request
+            .messages
+            .push(crate::llm::ChatMessage::assistant("hello"));
         request.stop.push("STOP".into());
         let body = provider().body(&request);
         assert_eq!(body["model"], "claude-x");
@@ -332,9 +359,16 @@ mod tests {
             r#"{"type":"message_stop"}"#,
         ];
         for data in frames {
-            handle_event(SseEvent { data: data.into(), ..Default::default() }, &tx, &mut state)
-                .await
-                .unwrap();
+            handle_event(
+                SseEvent {
+                    data: data.into(),
+                    ..Default::default()
+                },
+                &tx,
+                &mut state,
+            )
+            .await
+            .unwrap();
         }
         drop(tx);
         let mut deltas = Vec::new();
@@ -344,11 +378,19 @@ mod tests {
         assert_eq!(
             deltas,
             vec![
-                ChatDelta::Usage { input_tokens: 7, output_tokens: 0 },
+                ChatDelta::Usage {
+                    input_tokens: 7,
+                    output_tokens: 0
+                },
                 ChatDelta::Reasoning { text: "hmm".into() },
                 ChatDelta::Text { text: "hi".into() },
-                ChatDelta::Usage { input_tokens: 7, output_tokens: 3 },
-                ChatDelta::Done { finish_reason: Some("end_turn".into()) },
+                ChatDelta::Usage {
+                    input_tokens: 7,
+                    output_tokens: 3
+                },
+                ChatDelta::Done {
+                    finish_reason: Some("end_turn".into())
+                },
             ]
         );
     }

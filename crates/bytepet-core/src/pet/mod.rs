@@ -7,11 +7,13 @@
 //! accepted, so a single pet package works across compatible tools.
 
 pub mod atlas;
+pub mod default_pet;
 pub mod library;
 pub mod manifest;
 pub mod state;
 
 pub use atlas::{AlphaMask, PetAtlas};
+pub use default_pet::{DEFAULT_PET_ID, DEFAULT_PET_MANIFEST, DEFAULT_PET_SPRITESHEET};
 pub use library::{LibraryRoot, PetEntry, PetLibrary, RootKind, ValidationReport};
 pub use manifest::{AnimationTrack, FrameRef, FrameSpec, PetManifest};
 pub use state::{Animation, PetEngine, PetState, Transition};

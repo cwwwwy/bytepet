@@ -31,6 +31,8 @@ pub struct BootstrapState {
     pub agent_url: String,
     pub data_dir: std::path::PathBuf,
     pub keyring_available: bool,
+    /// True when the first-run onboarding card should be shown.
+    pub onboarding: bool,
     /// State currently shown by the engine, so a freshly loaded renderer can
     /// resume mid-animation instead of waiting for the next event.
     pub current_state: Option<crate::events::PetStateEvent>,
@@ -55,6 +57,7 @@ fn bootstrap(st: &AppState) -> BootstrapState {
         agent_url: st.agent_url(),
         data_dir: st.paths.config_dir.clone(),
         keyring_available: st.keyring_available,
+        onboarding: config.first_run,
         current_state: None,
         config,
         pets,
@@ -150,7 +153,10 @@ pub fn persona_templates() -> std::collections::BTreeMap<String, Persona> {
 }
 
 #[tauri::command]
-pub fn save_persona<R: Runtime>(app: AppHandle<R>, persona: Persona) -> Result<Vec<Persona>, String> {
+pub fn save_persona<R: Runtime>(
+    app: AppHandle<R>,
+    persona: Persona,
+) -> Result<Vec<Persona>, String> {
     let st = app_state(&app);
     st.personas.save(&persona).map_err(|e| e.to_string())?;
     let list = st.personas.list().map_err(|e| e.to_string())?;
@@ -203,7 +209,11 @@ pub fn import_persona<R: Runtime>(
 }
 
 #[tauri::command]
-pub fn export_persona<R: Runtime>(app: AppHandle<R>, id: String, out: String) -> Result<(), String> {
+pub fn export_persona<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+    out: String,
+) -> Result<(), String> {
     app_state(&app)
         .personas
         .export_file(&id, std::path::Path::new(&out))
@@ -260,7 +270,10 @@ pub fn save_provider<R: Runtime>(
 }
 
 #[tauri::command]
-pub fn delete_provider<R: Runtime>(app: AppHandle<R>, id: String) -> Result<Vec<ProviderConfig>, String> {
+pub fn delete_provider<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+) -> Result<Vec<ProviderConfig>, String> {
     let st = app_state(&app);
     let _ = st.secrets.delete(&format!("provider/{}", id));
     st.update_config(|cfg| {
@@ -282,7 +295,10 @@ pub struct ProviderTestResult {
 }
 
 #[tauri::command]
-pub async fn test_provider<R: Runtime>(app: AppHandle<R>, id: String) -> Result<ProviderTestResult, String> {
+pub async fn test_provider<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+) -> Result<ProviderTestResult, String> {
     let (cfg, secrets) = {
         let st = app_state(&app);
         let cfg = st
@@ -319,7 +335,11 @@ pub async fn test_provider<R: Runtime>(app: AppHandle<R>, id: String) -> Result<
 }
 
 #[tauri::command]
-pub fn set_api_key<R: Runtime>(app: AppHandle<R>, provider_id: String, key: String) -> Result<(), String> {
+pub fn set_api_key<R: Runtime>(
+    app: AppHandle<R>,
+    provider_id: String,
+    key: String,
+) -> Result<(), String> {
     app_state(&app)
         .secrets
         .set(&format!("provider/{}", provider_id), key.trim())
@@ -357,7 +377,12 @@ pub fn create_conversation<R: Runtime>(
     let st = app_state(&app);
     let persona_id = persona_id
         .or_else(|| st.config().active_persona.clone())
-        .or_else(|| st.personas.list().ok().and_then(|p| p.into_iter().next().map(|p| p.id)))
+        .or_else(|| {
+            st.personas
+                .list()
+                .ok()
+                .and_then(|p| p.into_iter().next().map(|p| p.id))
+        })
         .ok_or("没有可用人格")?;
     st.memory
         .create_conversation(&persona_id, None)
@@ -392,8 +417,7 @@ pub fn send_message<R: Runtime>(
 ) -> Result<(), String> {
     let st = app_state(&app);
     let memory = st.memory.clone();
-    st.chat
-        .send(app.clone(), memory, conversation_id, text)
+    st.chat.send(app.clone(), memory, conversation_id, text)
 }
 
 #[tauri::command]
@@ -438,7 +462,10 @@ pub fn get_settings<R: Runtime>(app: AppHandle<R>) -> AppConfig {
 }
 
 #[tauri::command]
-pub fn save_settings<R: Runtime>(app: AppHandle<R>, config: AppConfig) -> Result<AppConfig, String> {
+pub fn save_settings<R: Runtime>(
+    app: AppHandle<R>,
+    config: AppConfig,
+) -> Result<AppConfig, String> {
     let st = app_state(&app);
     st.update_config(|current| *current = config)
         .map_err(|e| e.to_string())?;
@@ -446,10 +473,10 @@ pub fn save_settings<R: Runtime>(app: AppHandle<R>, config: AppConfig) -> Result
     crate::window::pet_window::activate_active_pet(&app).map_err(|e| e.to_string())?;
     if let Some(state) = app.try_state::<AppState>() {
         if let Some(runtime) = state.pet_runtime() {
-            runtime
-                .walk
-                .enabled
-                .store(saved.pet.auto_walk.enabled, std::sync::atomic::Ordering::Relaxed);
+            runtime.walk.enabled.store(
+                saved.pet.auto_walk.enabled,
+                std::sync::atomic::Ordering::Relaxed,
+            );
             runtime.hit.set_mode(saved.pet.click_through.clone());
         }
     }
@@ -467,8 +494,8 @@ pub fn set_pet_state<R: Runtime>(
     message: Option<String>,
     ttl_ms: Option<u64>,
 ) -> Result<(), String> {
-    let state = PetState::from_name(&state)
-        .ok_or_else(|| format!("unknown bytepet state '{}'", state))?;
+    let state =
+        PetState::from_name(&state).ok_or_else(|| format!("unknown bytepet state '{}'", state))?;
     let ttl = ttl_ms.map(std::time::Duration::from_millis);
     crate::window::pet_window::raise_state(&app, state, "ui", message, ttl);
     Ok(())
@@ -485,7 +512,13 @@ pub fn speak<R: Runtime>(app: AppHandle<R>, text: String) {
         .or_else(|| config.tts.voice.clone());
     let rate = persona
         .as_ref()
-        .map(|p| if p.tts.rate > 0.0 { p.tts.rate } else { config.tts.rate })
+        .map(|p| {
+            if p.tts.rate > 0.0 {
+                p.tts.rate
+            } else {
+                config.tts.rate
+            }
+        })
         .unwrap_or(config.tts.rate);
     st.tts
         .speak(&app, &text, voice, rate, config.tts.max_chars.max(50));
@@ -497,7 +530,9 @@ pub fn stop_speaking<R: Runtime>(app: AppHandle<R>) {
 }
 
 #[tauri::command]
-pub fn hooks_status<R: Runtime>(app: AppHandle<R>) -> Result<Vec<bytepet_core::agent::HookStatus>, String> {
+pub fn hooks_status<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<Vec<bytepet_core::agent::HookStatus>, String> {
     let st = app_state(&app);
     let installer = hook_installer(&st);
     Ok(vec![
@@ -519,7 +554,11 @@ fn parse_agent(name: &str) -> Result<bytepet_core::agent::AgentKind, String> {
 
 fn hook_installer(st: &AppState) -> bytepet_core::agent::HookInstaller {
     let home = dirs::home_dir().unwrap_or_else(|| st.paths.config_dir.clone());
-    bytepet_core::agent::HookInstaller::new(home, st.paths.config_dir.clone(), st.config().agent.port)
+    bytepet_core::agent::HookInstaller::new(
+        home,
+        st.paths.config_dir.clone(),
+        st.config().agent.port,
+    )
 }
 
 #[tauri::command]
@@ -550,6 +589,14 @@ pub fn uninstall_hooks<R: Runtime>(
 pub fn open_chat<R: Runtime>(app: AppHandle<R>) {
     tracing::debug!("open_chat requested");
     crate::window::show_chat(&app);
+}
+
+/// Dismiss the first-run onboarding card.
+#[tauri::command]
+pub fn complete_onboarding<R: Runtime>(app: AppHandle<R>) -> Result<AppConfig, String> {
+    let st = app_state(&app);
+    st.update_config(|cfg| cfg.first_run = false)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -589,7 +636,10 @@ pub fn export_logs<R: Runtime>(app: AppHandle<R>) -> LogsPath {
 /// The pet window normally loads the atlas through the Tauri asset protocol;
 /// this is the fallback for environments where that protocol is unavailable.
 #[tauri::command]
-pub fn pet_spritesheet_data_url<R: Runtime>(app: AppHandle<R>, id: String) -> Result<String, String> {
+pub fn pet_spritesheet_data_url<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+) -> Result<String, String> {
     use base64::Engine;
     let entry = app_state(&app)
         .library

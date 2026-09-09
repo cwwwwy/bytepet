@@ -168,6 +168,11 @@ pub struct AppConfig {
     pub active_pet: Option<String>,
     pub active_persona: Option<String>,
     pub default_provider: Option<String>,
+    /// True until the user dismisses the first-run onboarding.
+    pub first_run: bool,
+    /// The bundled default pet has already been considered for seeding, so
+    /// deleting it must not resurrect it on the next launch.
+    pub default_pet_seeded: bool,
     pub pet: PetWindowConfig,
     pub chat: ChatConfig,
     pub agent: AgentConfig,
@@ -184,6 +189,8 @@ impl Default for AppConfig {
             active_pet: None,
             active_persona: None,
             default_provider: None,
+            first_run: true,
+            default_pet_seeded: false,
             pet: PetWindowConfig::default(),
             chat: ChatConfig::default(),
             agent: AgentConfig::default(),
@@ -200,9 +207,8 @@ impl AppConfig {
             return Ok(Self::default());
         }
         let text = std::fs::read_to_string(path)?;
-        let mut cfg: AppConfig = serde_json::from_str(&text).map_err(|e| {
-            Error::config(format!("cannot parse {}: {e}", path.display()))
-        })?;
+        let mut cfg: AppConfig = serde_json::from_str(&text)
+            .map_err(|e| Error::config(format!("cannot parse {}: {e}", path.display())))?;
         cfg.migrate()?;
         Ok(cfg)
     }
@@ -303,6 +309,18 @@ mod tests {
         let cfg = AppConfig::load(&tmp.path().join("nope.json")).unwrap();
         assert_eq!(cfg.schema_version, CONFIG_SCHEMA_VERSION);
         assert!(cfg.agent.enabled);
+        assert!(cfg.first_run, "a fresh install shows onboarding once");
+        assert!(!cfg.default_pet_seeded);
+    }
+
+    #[test]
+    fn older_config_without_new_flags_defaults_to_onboarding() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("config.json");
+        std::fs::write(&path, r#"{"schemaVersion":1,"activePet":"zip"}"#).unwrap();
+        let cfg = AppConfig::load(&path).unwrap();
+        assert!(cfg.first_run);
+        assert!(!cfg.default_pet_seeded);
     }
 
     #[test]
