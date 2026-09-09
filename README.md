@@ -125,6 +125,7 @@ export CARGO_HOME="$PWD/.cache/cargo"
 - CLI 通道会启动本机 `codex` / `claude` 进程，默认使用最保守的沙箱与权限模式；请自行确认其行为符合预期。
 - v1 只支持单只宠物同屏；多宠物与在线宠物市场在后续版本。
 - Linux 目前未做验证。
+- Windows 的 hook 命令写的是裸路径，若 `%APPDATA%` 中含空格，Claude Code 可能需要在 `command` 里加引号（尚未在真机确认）。
 
 ## 验证状态（macOS 26.6.2 / Rust 1.98 / Codex CLI 0.151.0 / Claude Code 2.1.251）
 
@@ -143,8 +144,13 @@ export CARGO_HOME="$PWD/.cache/cargo"
 | Claude CLI 通道 | 真实会话跑通（含 reasoning/text 增量与用量） |
 | HTTP 通道 | 三种协议用录制 SSE 回放做集成测试（含取消与 401 脱敏） |
 | 密钥存储 | 已确认写入 macOS 钥匙串（`MacCredential`） |
+| Windows 交叉检查 | `cargo xwin check/clippy --target x86_64-pc-windows-msvc --all-targets -D warnings` 全绿（含 tauri、全部 target） |
+| CI（macOS arm64 + Intel） | 全流程通过：pnpm 构建 → Rust 测试 → clippy → 前端测试 → 打包 `.app` |
+| CI（Windows） | Rust 测试已通过；clippy 报出的唯一问题（unix-only 导入）已修复并交叉验证 |
 
-尚未在本机自动化验证、建议手动确认：像素级点击穿透手感、托盘菜单点击、聊天窗中文输入法、系统语音试听。
+尚未在真机验证、建议手动确认：像素级点击穿透手感、托盘菜单点击、聊天窗中文输入法、系统语音试听、Windows 上的透明窗/穿透/托盘与 NSIS 打包。
+
+> CI 目前无法运行：私有仓库的 Actions 免费额度已耗尽（macOS runner 按 10 倍计费）。工作流本身已就绪，仓库转为 public 或提高 spending limit 后即可直接使用。
 
 > 回归过程中发现并修复：同一 agent 会话内 `running → review` 会被优先级仲裁挡住，导致宠物一直显示“工作中”。现在优先级只在**不同来源**之间仲裁，同一来源可自行推进状态（`pet::state::tests::same_source_can_step_down_but_others_cannot`）。
 
