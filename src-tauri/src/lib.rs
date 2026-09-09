@@ -29,6 +29,16 @@ pub fn run() {
         .setup(|app| {
             let state = state::AppState::initialize(app.handle())?;
             app.manage(state);
+            for label in ["pet", "chat"] {
+                let window = app.get_webview_window(label);
+                tracing::debug!(
+                    label,
+                    exists = window.is_some(),
+                    visible = window.as_ref().and_then(|w| w.is_visible().ok()),
+                    url = window.as_ref().and_then(|w| w.url().ok()).map(|u| u.to_string()),
+                    "window check"
+                );
+            }
             tray::build(app.handle())?;
             window::pet_window::activate_active_pet(app.handle())?;
             // Wry-specific background loops: hit testing needs the global cursor
@@ -118,7 +128,7 @@ pub fn run() {
 
 fn init_tracing() {
     let filter = EnvFilter::try_from_env("BYTEPET_LOG")
-        .unwrap_or_else(|_| EnvFilter::new("info,bytepet_app=debug,bytepet_core=debug"));
+        .unwrap_or_else(|_| EnvFilter::new("info,bytepet_lib=debug,bytepet_app=debug,bytepet_core=debug"));
     let _ = tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_target(false)
