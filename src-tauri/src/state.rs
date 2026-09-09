@@ -190,21 +190,18 @@ fn seed_default_providers(config: &mut AppConfig) -> bool {
     added
 }
 
-/// Minimal `which`: look for an executable on PATH.
+/// Minimal `which`: look for an executable on PATH, including Windows shims.
 fn which(binary: &str) -> Option<std::path::PathBuf> {
     let path = std::env::var_os("PATH")?;
-    for dir in std::env::split_paths(&path) {
-        let candidate = dir.join(binary);
-        if candidate.is_file() {
-            return Some(candidate);
-        }
-        #[cfg(windows)]
-        {
-            let exe = dir.join(format!("{binary}.exe"));
-            if exe.is_file() {
-                return Some(exe);
-            }
-        }
-    }
-    None
+    let dirs: Vec<std::path::PathBuf> = std::env::split_paths(&path).collect();
+    #[cfg(windows)]
+    let exts: Vec<String> = std::env::var("PATHEXT")
+        .unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".to_string())
+        .split(';')
+        .map(|ext| ext.to_ascii_lowercase())
+        .filter(|ext| !ext.is_empty())
+        .collect();
+    #[cfg(not(windows))]
+    let exts: Vec<String> = Vec::new();
+    bytepet_core::llm::providers::find_in_dirs(binary, &dirs, &exts)
 }

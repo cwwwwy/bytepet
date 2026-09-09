@@ -94,7 +94,7 @@ impl CodexCliProvider {
     }
 
     fn command(&self) -> Command {
-        let mut command = Command::new(&self.binary);
+        let mut command = super::cli_command(&self.binary.to_string_lossy());
         command.arg("exec");
         if let Some(session_id) = &self.resume_session_id {
             command.arg("resume").arg(session_id);
