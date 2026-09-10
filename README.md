@@ -72,6 +72,19 @@ curl -XPOST http://127.0.0.1:17872/state \
 `GET /health` returns the current pet/persona/state snapshot and `GET /pets`
 lists the discovered pets.
 
+## Pet library
+
+The application keeps its own writable library next to the config file
+(`<config>/BytePet/pets` on every platform) and links `~/.codex/pets` and
+`~/.unipet/pets` read-only, with the local library winning on id clashes.
+
+The bundled ByteBot is installed into the local library on every start, so it
+is always available to switch back to; deleting it in the settings opts out for
+good. Settings -> 宠物 imports a pet folder or `.zip` (also by dropping it onto
+the window), exports the Codex upload format, and deletes local copies with a
+confirmation. Packages are validated before import: manifest, geometry,
+decoding, path traversal, size and entry limits.
+
 ## DeepSeek
 
 The first version uses the OpenAI-compatible Chat Completions endpoint:

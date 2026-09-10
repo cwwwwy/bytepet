@@ -2,7 +2,8 @@
 //!
 //! A fresh install must show something even when the user has never installed a
 //! Codex pet, so a self-authored atlas is embedded in the binary and written to
-//! the writable library exactly once (see `AppConfig::default_pet_seeded`).
+//! the writable library. It stays available next to the user's own pets; only an
+//! explicit delete opts out (see `AppConfig::bundled_pet_removed`).
 
 use std::path::Path;
 
@@ -34,13 +35,18 @@ pub fn install(library: &PetLibrary) -> Result<PetEntry> {
     PetLibrary::load_entry(&dir, RootKind::AppData)
 }
 
-/// Seed the bundled pet when the user has no pets at all.
+/// Make sure the bundled pet exists in the writable library.
 ///
-/// Returns the installed entry only when seeding actually happened. An empty
-/// result means the user already has a pet (Codex, UniPet or local) and nothing
-/// was written.
-pub fn seed_if_empty(library: &PetLibrary) -> Result<Option<PetEntry>> {
-    if !library.list().is_empty() {
+/// `user_removed` is the opt-out recorded when the pet is deleted from the
+/// local library; it is the only case where nothing is written. The bundled
+/// pet is otherwise installed even when the user already owns Codex, UniPet or
+/// imported pets, so it is always there to fall back on.
+pub fn ensure_installed(library: &PetLibrary, user_removed: bool) -> Result<Option<PetEntry>> {
+    if user_removed {
+        return Ok(None);
+    }
+    let root = library.app_root()?;
+    if root.path.join(DEFAULT_PET_ID).join("pet.json").is_file() {
         return Ok(None);
     }
     Ok(Some(install(library)?))
@@ -91,19 +97,21 @@ mod tests {
     }
 
     #[test]
-    fn seeds_only_when_the_library_is_empty() {
+    fn installs_when_the_library_is_empty() {
         let (_tmp, library) = temp_library();
-        let seeded = seed_if_empty(&library).unwrap().expect("seeds when empty");
+        let seeded = ensure_installed(&library, false)
+            .unwrap()
+            .expect("installs when empty");
         assert_eq!(seeded.id, DEFAULT_PET_ID);
         assert!(seeded.dir.join("pet.json").is_file());
 
-        // Second call: the library is no longer empty.
-        assert!(seed_if_empty(&library).unwrap().is_none());
+        // Second call: it is already there, so nothing is rewritten.
+        assert!(ensure_installed(&library, false).unwrap().is_none());
         assert_eq!(library.list().len(), 1);
     }
 
     #[test]
-    fn does_not_seed_when_the_user_already_has_a_pet() {
+    fn installs_next_to_the_users_own_pets() {
         let (tmp, library) = temp_library();
         let other = tmp.path().join("pets").join("user-pet");
         std::fs::create_dir_all(&other).unwrap();
@@ -117,9 +125,26 @@ mod tests {
             .save(other.join("spritesheet.png"))
             .unwrap();
 
-        assert!(seed_if_empty(&library).unwrap().is_none());
-        assert!(!tmp.path().join("pets").join(DEFAULT_PET_ID).exists());
-        assert_eq!(library.list().len(), 1);
+        // The user already has a pet, but the bundled one is still installed so
+        // it can be switched back to.
+        let installed = ensure_installed(&library, false).unwrap();
+        assert_eq!(
+            installed.map(|pet| pet.id),
+            Some(DEFAULT_PET_ID.to_string())
+        );
+        assert!(tmp.path().join("pets").join(DEFAULT_PET_ID).exists());
+        assert_eq!(library.list().len(), 2);
+    }
+
+    #[test]
+    fn respects_an_explicit_removal() {
+        let (_tmp, library) = temp_library();
+        assert!(ensure_installed(&library, true).unwrap().is_none());
+        assert!(library.list().is_empty());
+
+        // ...and the flag only suppresses the bundled pet.
+        let installed = ensure_installed(&library, false).unwrap();
+        assert!(installed.is_some());
     }
 
     #[test]

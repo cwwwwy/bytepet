@@ -27,7 +27,13 @@ eframe = { version = "0.36", default-features = false, features = ["default_font
 egui = "0.36"
 winit = "0.30"
 tray-icon = "0.24"
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
 raw-window-handle = "0.6"
 
 [profile.dev]

@@ -163,6 +163,11 @@ fn serve(
     while !shutdown.load(Ordering::SeqCst) {
         match listener.accept() {
             Ok((stream, _peer)) => {
+                // On Windows the accepted socket inherits the listener's
+                // non-blocking mode, which made reads return `WouldBlock` and
+                // dropped the connection without a reply. Serve it blocking
+                // with a timeout instead.
+                let _ = stream.set_nonblocking(false);
                 let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
                 let _ = handle_connection(stream, &sender, &health);
             }
@@ -323,6 +328,27 @@ mod tests {
         stream.read_to_string(&mut response).unwrap();
         assert!(response.starts_with("HTTP/1.1 200"), "{response}");
         assert!(response.contains(r#""pet":"boba""#), "{response}");
+    }
+
+    #[test]
+    fn every_request_gets_a_response() {
+        // Regression: the accepted socket inherited the listener's non-blocking
+        // mode on Windows, so some requests were dropped with no reply at all.
+        let (sender, _receiver) = std::sync::mpsc::channel();
+        let server = StateServer::start(0, sender).unwrap();
+        for attempt in 0..25 {
+            let mut stream = TcpStream::connect(("127.0.0.1", server.port())).unwrap();
+            stream
+                .write_all(b"GET /pets HTTP/1.1\r\nhost: 127.0.0.1\r\n\r\n")
+                .unwrap();
+            let mut response = String::new();
+            use std::io::Read as _;
+            stream.read_to_string(&mut response).unwrap();
+            assert!(
+                response.starts_with("HTTP/1.1 200"),
+                "attempt {attempt} got {response:?}"
+            );
+        }
     }
 
     #[test]

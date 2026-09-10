@@ -258,6 +258,68 @@ impl PetAtlas {
             .collect()
     }
 
+    /// Crop one sprite to the drawn content and scale it into a square RGBA
+    /// icon, so windows and the tray can show the actual pet.
+    pub fn icon_rgba(&self, sprite_index: u32, size: u32) -> Option<Vec<u8>> {
+        let size = size.max(4);
+        let frame = self.frame;
+        let columns = frame.columns.max(1);
+        let row = sprite_index / columns;
+        let col = sprite_index % columns;
+        if row >= frame.rows || col >= columns {
+            return None;
+        }
+
+        let (mut min_x, mut min_y) = (frame.width, frame.height);
+        let (mut max_x, mut max_y) = (0_u32, 0_u32);
+        for y in 0..frame.height {
+            for x in 0..frame.width {
+                let pixel = self
+                    .image
+                    .get_pixel(col * frame.width + x, row * frame.height + y);
+                if pixel.0[3] >= ALPHA_THRESHOLD {
+                    min_x = min_x.min(x);
+                    min_y = min_y.min(y);
+                    max_x = max_x.max(x);
+                    max_y = max_y.max(y);
+                }
+            }
+        }
+        if min_x > max_x || min_y > max_y {
+            return None;
+        }
+
+        // Center the drawn content in a square so the icon keeps its aspect.
+        let content_w = max_x - min_x + 1;
+        let content_h = max_y - min_y + 1;
+        let radius = (content_w.max(content_h) / 2 + 2) as i64;
+        let center_x = (min_x + content_w / 2) as i64;
+        let center_y = (min_y + content_h / 2) as i64;
+        let side = (radius * 2) as u32;
+        let mut square = RgbaImage::new(side, side);
+        for y in 0..side {
+            for x in 0..side {
+                let src_x = center_x - radius + x as i64;
+                let src_y = center_y - radius + y as i64;
+                if src_x < 0
+                    || src_y < 0
+                    || src_x >= frame.width as i64
+                    || src_y >= frame.height as i64
+                {
+                    continue;
+                }
+                let pixel = self.image.get_pixel(
+                    col * frame.width + src_x as u32,
+                    row * frame.height + src_y as u32,
+                );
+                square.put_pixel(x, y, *pixel);
+            }
+        }
+        let resized =
+            image::imageops::resize(&square, size, size, image::imageops::FilterType::Triangle);
+        Some(resized.into_raw())
+    }
+
     /// Unused cells (beyond the state's frame list) should be transparent.
     pub fn unused_cell_warnings(&self, used: &[u32]) -> Vec<String> {
         let mut warnings = Vec::new();
@@ -321,6 +383,22 @@ mod tests {
         assert!(!atlas.mask.opaque_at_cell_dilated(1, 22.0, 10.0, 1));
         // A radius of zero keeps the exact mask.
         assert!(!atlas.mask.opaque_at_cell_dilated(0, 22.0, 10.0, 0));
+    }
+
+    #[test]
+    fn icon_crops_the_drawn_content() {
+        let frame = FrameSpec::new(2, 1);
+        let atlas = PetAtlas::from_image(synthetic(frame), frame, PathBuf::from("x")).unwrap();
+        let icon = atlas.icon_rgba(0, 32).expect("cell 0 has content");
+        assert_eq!(icon.len(), 32 * 32 * 4);
+        // The 20x20 px square sits in the top-left corner, so the square crop is
+        // mostly transparent on the opposite side.
+        let bottom_right = &icon[(31 * 32 + 31) * 4..][..4];
+        assert_eq!(bottom_right[3], 0);
+        let center = &icon[(16 * 32 + 16) * 4..][..4];
+        assert_eq!(center[3], 255);
+        // A fully transparent sprite yields no icon at all.
+        assert!(atlas.icon_rgba(1, 32).is_none());
     }
 
     #[test]
