@@ -3,8 +3,6 @@
 /dist
 /.cache
 /.scratch
-/src-tauri/target
-/src-tauri/gen
 .DS_Store
 *.log
 .env
@@ -15,3 +13,7 @@
 /legacy/node_modules
 /legacy/.cache
 /legacy/dist
+/legacy/src-tauri/target
+/legacy/src-tauri/gen
+/legacy/release
+/legacy/.scratch
