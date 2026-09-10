@@ -1,13 +1,13 @@
-//! Core logic for the desktop pet.
+//! Lightweight BytePet core.
 //!
-//! This crate is deliberately free of any UI / Tauri dependency so that it can be
-//! unit tested quickly and reused by the CLI (`pet`) and the desktop app.
+//! This crate intentionally contains no UI framework and no Tauri dependency.
+//! It owns the Codex pet format, the animation state machine, personas,
+//! lightweight JSON memory and the single DeepSeek API client used by the
+//! rebuilt desktop application.
 
-pub mod agent;
-pub mod chat;
 pub mod config;
+pub mod deepseek;
 pub mod error;
-pub mod llm;
 pub mod memory;
 pub mod persona;
 pub mod pet;

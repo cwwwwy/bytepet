@@ -1,0 +1,32 @@
+[package]
+name = "bytepet-core"
+description = "Core logic for the desktop pet: Codex-compatible pet atlas, LLM providers, personas, memory, agent protocol"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+uuid = { workspace = true }
+time = { workspace = true }
+dirs = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+futures-util = { workspace = true }
+async-trait = { workspace = true }
+reqwest = { workspace = true }
+image = { workspace = true }
+rusqlite = { workspace = true }
+axum = { workspace = true }
+keyring = { workspace = true }
+toml_edit = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+tempfile = "3"
+anyhow = { workspace = true }

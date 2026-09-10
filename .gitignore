@@ -11,3 +11,7 @@
 .env.local
 .pet-local
 /release
+/legacy/target
+/legacy/node_modules
+/legacy/.cache
+/legacy/dist

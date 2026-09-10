@@ -1,0 +1,6 @@
+{
+  "id": "bytepet-default",
+  "displayName": "ByteBot",
+  "description": "BytePet 内置的像素小机器人，开箱即用。",
+  "spritesheetPath": "spritesheet.png"
+}

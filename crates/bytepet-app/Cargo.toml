@@ -1,0 +1,23 @@
+[package]
+name = "bytepet-app"
+description = "BytePet desktop pet application"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "bytepet"
+path = "src/main.rs"
+
+[dependencies]
+bytepet-core = { path = "../bytepet-core" }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+time = { workspace = true }
+eframe = { workspace = true }
+egui = { workspace = true }
+winit = { workspace = true }
+tray-icon = { workspace = true }
+windows-sys = { workspace = true }
+raw-window-handle = { workspace = true }

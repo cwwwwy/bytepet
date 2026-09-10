@@ -1,189 +1,64 @@
-# 桌宠 · BytePet
+# BytePet
 
-[![CI](https://github.com/cwwwwy/bytepet/actions/workflows/ci.yml/badge.svg)](https://github.com/cwwwwy/bytepet/actions/workflows/ci.yml)
-`https://github.com/cwwwwy/bytepet`
+BytePet is being rebuilt as a lightweight, Rust-only desktop pet.
 
-一款用 Rust 开发的跨平台桌面宠物（Windows / macOS）。它兼容 **Codex 桌宠图集格式**，能直接使用你 `~/.codex/pets/` 里已有的宠物；同时可以接入 Claude、OpenAI、DeepSeek 等大模型，也能直接复用本机已登录的 `codex` / `claude` 命令行，并支持完全自定义人格。
+The new application keeps the parts that made the original Codex pet useful:
 
-```
-┌──────────────────────────────┐        ┌─────────────────────────┐
-│ 透明置顶宠物窗（WebView）      │        │ 聊天 / 设置窗（Preact）  │
-│ canvas 逐帧播放 Codex 图集    │        │ 流式对话 · 人格 · 模型    │
-└───────────────┬──────────────┘        └────────────┬────────────┘
-                │  Tauri IPC / events                │
-┌───────────────▼────────────────────────────────────▼────────────┐
-│ src-tauri（Rust 应用壳）                                          │
-│ 窗口 · 托盘 · 像素级点击穿透 · 自动行走 · TTS · IPC 命令层          │
-└───────────────┬─────────────────────────────────────────────────┘
-                │
-┌───────────────▼─────────────────────────────────────────────────┐
-│ bytepet-core（纯 Rust 核心，无 UI 依赖）                              │
-│ 宠物图集/校验/状态机 · 5 种模型通道 · 人格 · 记忆 · Agent 状态协议   │
-└─────────────────────────────────────────────────────────────────┘
-```
+- reads Codex-compatible pet packages from `~/.codex/pets`
+- renders the 8x9 / 8x11 spritesheet animation state machine
+- supports a transparent, always-on-top pet window
+- supports click, drag and a small speech bubble
+- stores a simplified persona and lightweight pet memory
+- uses one DeepSeek API transport for short, intelligent greetings
 
-## 功能
+The previous Tauri + WebView application is kept under `legacy/` as a reference
+and is no longer part of the workspace.
 
-- **Codex 桌宠兼容**：直接读取并渲染 `~/.codex/pets/<id>/pet.json` + `spritesheet.webp`，支持官方 8×9（1536×1872）与 V2 8×11（1536×2288，含注视行）图集，并兼容 UniPet 的 `frame`/`animations` 扩展字段。导入/导出 `.zip` 包可直接分享或上传。
-- **透明悬浮 + 像素级点击穿透**：窗口无边框、置顶、可拖动；透明区域点击会穿透到下层应用，只有宠物实际画出来的像素才响应鼠标。
-- **流式对话**：Markdown / 代码块渲染、中文输入法可用、随时中断、Token 用量显示。
-- **五种模型通道**：
-  - Anthropic Messages API（Claude）
-  - OpenAI 兼容 `/chat/completions`（DeepSeek、OpenRouter、Ollama…）
-  - OpenAI `/responses`（Codex CLI 自定义 provider 常用的 `wire_api = "responses"`）
-  - 本地 `codex exec --json`（复用你已有的 Codex 登录，无需 API Key）
-  - 本地 `claude -p --output-format stream-json`（复用 Claude Code 登录）
-- **自定义人格**：系统提示 + 语气/长度/语言 + 采样参数 + 绑定宠物皮肤 + 绑定模型 + 独立记忆与 TTS 设置；内置 3 个模板，可导入导出。
-- **长期记忆**：SQLite + FTS5（trigram，中文可检索），滚动摘要 + 事实记忆 + 相关片段召回，全部在本地。
-- **Agent 状态联动**：本地 HTTP/WebSocket 协议 + Codex / Claude Code hook 安装器，让宠物跟随 AI 的工作状态（思考 / 等待 / 失败 / 完成）。协议与 UniPet 字段兼容。
-- **自动行走**：宠物在屏幕内散步、到边缘转身，聊天或 agent 工作时自动停下。
-- **TTS 朗读**：使用系统语音（macOS `say` / Windows SAPI / Linux `spd-say`），可中断、可换音色语速。
-- **托盘 / 单实例 / 开机自启**。
+## Workspace
 
-## 下载安装（普通用户）
-
-**不需要安装 Rust / Node / pnpm，也不需要打开终端。**
-
-1. 打开 [Releases](https://github.com/cwwwwy/bytepet/releases/latest)，下载对应安装包：
-   - macOS（Apple Silicon 与 Intel 通用）：`BytePet_x.y.z_universal.dmg`
-   - Windows 64 位：`BytePet_x.y.z_x64-setup.exe`
-2. 安装并打开。内置的像素小伙伴会直接出现在桌面上，首次启动会引导你连接模型。
-3. 连接模型（任选其一，也可先跳过）：
-   - 本机已登录 `codex` 或 `claude` 命令行 → 自动识别，直接可用；
-   - 或在「设置 → 模型服务」填一个 API Key（Claude / OpenAI / DeepSeek）；
-   - 或先只养宠物，之后再配。
-
-| 系统 | 要求 |
-|---|---|
-| macOS | 11.0+（Apple Silicon 或 Intel） |
-| Windows | Windows 10 1809+ / Windows 11，需要 WebView2（Win11 预装，Win10 安装时自动下载） |
-
-> 安装包**未签名**：macOS 首次打开请右键 →「打开」（或执行 `xattr -dr com.apple.quarantine /Applications/BytePet.app`）；Windows 在 SmartScreen 提示时点「更多信息 → 仍要运行」。这是零成本分发方案的已知提示，不影响功能。
-
-## 从源码构建（开发者）
-
-前置：Rust（由 `rust-toolchain.toml` 钉在 1.98.0）、Node ≥ 20、pnpm 12。
-
-```bash
-git clone https://github.com/cwwwwy/bytepet.git
-cd bytepet
-pnpm install
-pnpm tauri dev          # 开发模式（宠物窗 + 托盘 + 聊天窗）
-pnpm tauri build        # 打包 .app/.dmg（macOS）或 .exe（Windows）
+```text
+crates/bytepet-core/   Pet format, animation engine, persona, memory, DeepSeek client
+crates/bytepet-app/    egui/eframe desktop application
+legacy/                Previous Tauri app and frontend, reference only
 ```
 
-首次启动会按优先级选择宠物：`~/.codex/pets` / `~/.unipet/pets` 里已有的宠物，或应用内置的默认宠物。在托盘菜单或聊天窗里选择宠物、配置模型、创建人格。
+## Build
 
-发布安装包见 [docs/RELEASING.md](docs/RELEASING.md)。
-
-### 配置模型
-
-在「设置 → 模型服务」里新增一个服务：
-
-| 通道 | base_url | 模型 | 需要 Key |
-|---|---|---|---|
-| Anthropic | `https://api.anthropic.com` | `claude-sonnet-4-5` 等 | 是（存系统钥匙串） |
-| OpenAI 兼容 | `https://api.deepseek.com` | `deepseek-chat` 等 | 是 |
-| OpenAI Responses | `https://api.openai.com/v1` | `gpt-5` 等 | 是 |
-| Codex CLI | — | 留空或 `codex` 默认模型 | 否（用本地登录） |
-| Claude Code CLI | — | 留空 | 否（用本地登录） |
-
-API Key 只写入 macOS 钥匙串 / Windows 凭据管理器，配置文件里只保存引用。
-
-### 让宠物跟随 Codex / Claude Code
-
-```bash
-bytepet hooks install all      # 安装 hook（会先备份配置，可完全回滚）
-bytepet hooks status
-bytepet hooks uninstall all
+```powershell
+cargo run -p bytepet-app
 ```
 
-也可以从任何脚本或 agent 直接调用本地协议：
+The Windows MSVC target still requires the MSVC linker. Install Visual Studio
+Build Tools with the "Desktop development with C++" workload before building.
 
-```bash
-curl -XPOST http://127.0.0.1:17872/state \
-  -H 'content-type: application/json' \
-  -d '{"source":"my-script","state":"running","message":"跑测试中","ttlMs":120000}'
+## DeepSeek
+
+The first version uses the OpenAI-compatible Chat Completions endpoint:
+
+```text
+base URL: https://api.deepseek.com/v1
+model:    deepseek-v4-flash
 ```
 
-## 仓库结构
+Set the API key in the environment:
 
-```
-crates/bytepet-core/          纯 Rust 核心：宠物格式、状态机、模型通道、人格、记忆、协议
-crates/bytepet-core/assets/   内置默认宠物（自研像素图集，随二进制嵌入）
-crates/bytepet-cli/           bytepet 命令行（state / doctor / pet / hooks）
-src-tauri/                    Tauri 应用：窗口、托盘、穿透、行走、TTS、IPC
-src/pet/                      宠物窗渲染器（canvas，逐帧）
-src/chat/                     聊天与设置界面（Preact）
-scripts/                      验证与发布脚本（verify-* / release-* / bump-version）
-docs/                         格式、协议、模型通道、架构、Windows 验证与发布文档
+```powershell
+$env:DEEPSEEK_API_KEY = "sk-..."
+cargo run -p bytepet-app
 ```
 
-## 开发
+The settings window can also save the key to the operating system keychain.
+Greeting requests are non-streaming and use a small token budget; if the API is
+unavailable, BytePet falls back to the persona's fixed or time-based greeting.
 
-```bash
-bash scripts/verify-macos.sh      # 一条命令跑完 CI 的全部关卡
-cargo test --workspace            # 仅 Rust 测试
-cargo clippy --workspace --all-targets -- -D warnings
-pnpm build && pnpm test           # 前端类型检查、打包与测试
-cargo run -p bytepet-core --example make_default_pet   # 重新生成内置宠物图集
-```
+## Memory
 
-如果本机 `~/.cargo` 不可写（例如受限沙箱），把 `CARGO_HOME` 指向仓库内目录：
+Memory is stored in `memory.json` under the platform config directory. It is
+not a chat transcript. It contains only:
 
-```bash
-export CARGO_HOME="$PWD/.cache/cargo"
-```
+- long-term facts
+- recent interaction events
+- last-seen and last-greeting state
 
-日志：设置环境变量 `BYTEPET_LOG=debug` 后启动。
-
-## 文档
-
-- [宠物格式与兼容性](docs/PET_FORMAT.md)
-- [本地状态协议](docs/PROTOCOL.md)
-- [模型通道](docs/PROVIDERS.md)
-- [架构说明](docs/ARCHITECTURE.md)
-- [Windows 实机验证指南](docs/WINDOWS.md)
-- [发布流程](docs/RELEASING.md)
-
-## 已知限制
-
-- macOS 透明窗口依赖 `macOSPrivateApi`，因此**不适合上架 Mac App Store**，请走直接分发。
-- CLI 通道会启动本机 `codex` / `claude` 进程，默认使用最保守的沙箱与权限模式；请自行确认其行为符合预期。
-- v1 只支持单只宠物同屏；多宠物与在线宠物市场在后续版本。
-- Linux 目前未做验证。
-- Windows 的 hook 命令写的是裸路径，若 `%APPDATA%` 中含空格，Claude Code 可能需要在 `command` 里加引号（尚未在真机确认）。
-
-## 验证状态（macOS 26.6.2 / Rust 1.98 / Codex CLI 0.151.0 / Claude Code 2.1.251）
-
-| 项目 | 结果 |
-|---|---|
-| `cargo test --workspace` | 137 项全部通过（bytepet-core 97 + 集成 32 + CLI 4 + 示例） |
-| `pnpm build` / `pnpm test` | 通过（前端 53 项测试） |
-| 真实 Codex 宠物渲染 | `~/.codex/pets/zip`（1536×1872）逐帧播放，帧时长与官方表一致 |
-| 打招呼 → 回落 | waving 行（sprite 24–27）播放后回到 idle |
-| 自动行走 | 窗口在屏幕内往返、边缘转身，左右跑行（8–15 / 16–23）正确切换 |
-| 聊天主链路 | 3 项端到端测试：命令层 → 人格/服务查找 → HTTP → SSE → 落库 → 用量，含无服务时的失败路径 |
-| 本地状态协议 | `GET /health`、`POST /state` 正常，健康快照含当前宠物与状态 |
-| Codex hook 往返 | 临时 `CODEX_HOME` 安装 → 真实 `codex exec` 触发 → 宠物切到 review → 卸载后配置逐字节还原 |
-| Claude Code hook 往返 | 临时 `HOME` 安装 → 真实 `claude -p` 触发 waving/running/review → 卸载后逐字节还原 |
-| Codex CLI 通道 | 真实会话跑通（`你好世界`，含 session id 与用量） |
-| Claude CLI 通道 | 真实会话跑通（含 reasoning/text 增量与用量） |
-| HTTP 通道 | 三种协议用录制 SSE 回放做集成测试（含取消与 401 脱敏） |
-| 密钥存储 | 已确认写入 macOS 钥匙串（`MacCredential`） |
-| 内置默认宠物 | ByteBot 8×9 图集（1536×1872，8 色，左右跑精确镜像，脚底基线 y=200），生成器确定性可复现 |
-| 全新用户开箱 | 临时 HOME + 空配置目录 + 仅系统 PATH 启动打包版：自动播种 ByteBot、渲染 92 帧、`/health` 显示 `bytepet-default` |
-| 发布产物 | `v0.1.0` 已发布 universal `.dmg` + Windows `x64-setup.exe` + `SHA256SUMS`，匿名下载并校验一致 |
-| Windows 交叉检查 | `cargo xwin check/clippy --target x86_64-pc-windows-msvc --all-targets -D warnings` 全绿（含 tauri、全部 target） |
-| CI（macOS arm64 + Intel） | 全流程通过：pnpm 构建 → Rust 测试 → clippy → 前端测试 → 打包 `.app` |
-| CI（Windows） | Rust 测试与 clippy 通过，NSIS 安装包由 `release.yml` 在 CI 产出并附到 Release |
-
-尚未在真机验证、建议手动确认：像素级点击穿透手感、托盘菜单点击、聊天窗中文输入法、系统语音试听、Windows 上的透明窗/穿透/托盘与安装包实机安装（清单见 [docs/WINDOWS.md](docs/WINDOWS.md)）。
-
-> 仓库已公开，CI 与 `release.yml` 均可免费运行；打 `v*` 标签即自动构建并上传安装包。
-
-> 回归过程中发现并修复：同一 agent 会话内 `running → review` 会被优先级仲裁挡住，导致宠物一直显示“工作中”。现在优先级只在**不同来源**之间仲裁，同一来源可自行推进状态（`pet::state::tests::same_source_can_step_down_but_others_cannot`）。
-
-## 许可
-
-[MIT](LICENSE) © cwwwwy
+This keeps the rebuilt application small while still allowing greetings to
+refer to stable preferences and recent context.

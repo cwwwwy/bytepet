@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-/// Unified error type for the lightweight BytePet core.
+/// Unified error type for bytepet-core.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("io error: {0}")]
@@ -30,11 +30,17 @@ pub enum Error {
     #[error("authentication failed for provider {0}")]
     Unauthorized(String),
 
+    #[error("request cancelled")]
+    Cancelled,
+
     #[error("config error: {0}")]
     Config(String),
 
     #[error("memory error: {0}")]
     Memory(String),
+
+    #[error("agent protocol error: {0}")]
+    Agent(String),
 
     #[error("not found: {0}")]
     NotFound(String),
@@ -50,23 +56,18 @@ impl Error {
     pub fn manifest(msg: impl Into<String>) -> Self {
         Error::Manifest(msg.into())
     }
-
     pub fn atlas(msg: impl Into<String>) -> Self {
         Error::Atlas(msg.into())
     }
-
     pub fn config(msg: impl Into<String>) -> Self {
         Error::Config(msg.into())
     }
-
     pub fn memory(msg: impl Into<String>) -> Self {
         Error::Memory(msg.into())
     }
-
     pub fn provider(msg: impl Into<String>) -> Self {
         Error::Provider(msg.into())
     }
-
     pub fn not_found_path(path: impl Into<PathBuf>) -> Self {
         Error::NotFound(path.into().display().to_string())
     }

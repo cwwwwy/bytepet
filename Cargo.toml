@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/bytepet-core", "crates/bytepet-cli", "src-tauri"]
+members = ["crates/bytepet-core", "crates/bytepet-app"]
 
 [workspace.package]
 version = "0.1.0"
@@ -9,59 +9,26 @@ license = "MIT"
 authors = ["book"]
 
 [workspace.dependencies]
-# --- shared basics ---
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
 anyhow = "1"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 parking_lot = "0.12"
 uuid = { version = "1", features = ["v4", "serde"] }
-time = { version = "0.3", features = ["formatting", "parsing", "serde", "macros"] }
+time = { version = "0.3", features = ["formatting", "macros", "local-offset"] }
 dirs = "6"
-clap = { version = "4", features = ["derive", "env"] }
-
-# --- async / http ---
-tokio = { version = "1", features = [
-  "rt-multi-thread",
-  "macros",
-  "sync",
-  "time",
-  "process",
-  "fs",
-  "io-util",
-  "net",
-] }
-tokio-util = { version = "0.7", features = ["rt"] }
-futures-util = "0.3"
-async-trait = "0.1"
-reqwest = { version = "0.13", default-features = false, features = [
-  "json",
-  "stream",
-  "rustls",
-  "rustls-native-certs",
-  "charset",
-  "http2",
-] }
-axum = { version = "0.8", features = ["ws", "json", "tokio"] }
-
-# --- assets / storage ---
-image = { version = "0.25", default-features = false, features = [
-  "webp",
-  "png",
-  "jpeg",
-] }
-# FTS5 is compiled in by the bundled SQLite build.
-rusqlite = { version = "0.37", features = ["bundled"] }
-# Real platform credential stores: macOS Keychain / Windows Credential Manager.
-keyring = { version = "3", default-features = false, features = [
-  "apple-native",
-  "windows-native",
-] }
-toml_edit = "0.25"
+image = { version = "0.25", default-features = false, features = ["webp", "png", "jpeg"] }
 zip = { version = "8", default-features = false, features = ["deflate"] }
-base64 = "0.22"
+ureq = { version = "3", features = ["json"] }
+keyring = { version = "3", default-features = false, features = ["apple-native", "windows-native"] }
+eframe = { version = "0.36", default-features = false, features = ["default_fonts", "glow"] }
+egui = "0.36"
+winit = "0.30"
+tray-icon = "0.24"
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_UI_WindowsAndMessaging"] }
+raw-window-handle = "0.6"
 
 [profile.dev]
 opt-level = 1
