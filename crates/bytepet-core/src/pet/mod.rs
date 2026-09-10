@@ -16,7 +16,9 @@ pub use atlas::{AlphaMask, PetAtlas};
 pub use default_pet::{DEFAULT_PET_ID, DEFAULT_PET_MANIFEST, DEFAULT_PET_SPRITESHEET};
 pub use library::{LibraryRoot, PetEntry, PetLibrary, RootKind, ValidationReport};
 pub use manifest::{AnimationTrack, FrameRef, FrameSpec, PetManifest};
-pub use state::{Animation, PetEngine, PetState, Transition};
+pub use state::{
+    adapt_durations, resolve_animations_with_occupancy, Animation, PetEngine, PetState, Transition,
+};
 
 /// Maximum accepted spritesheet size (bytes). Matches UniPet's safety rule.
 pub const MAX_SPRITESHEET_BYTES: u64 = 16 * 1024 * 1024;

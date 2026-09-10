@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
+use crate::pet::atlas::PetAtlas;
 use crate::pet::manifest::{FrameSpec, PetManifest};
 
 /// The Codex-compatible animation rows.
@@ -112,9 +113,35 @@ impl PetState {
         }
     }
 
-    /// One-shot states return to their fallback after playing once.
+    /// One-shot states return to their fallback after playing once. The V2
+    /// look rows are full turn-and-return cycles, so they play once too.
     pub fn is_one_shot(self) -> bool {
-        matches!(self, PetState::Waving | PetState::Jumping)
+        matches!(
+            self,
+            PetState::Waving | PetState::Jumping | PetState::LookRow9 | PetState::LookRow10
+        )
+    }
+
+    /// Direction of a V2 look row, measured from the shipped Codex pet: the
+    /// dark facial features sit right of the head centre in row 9 and left of
+    /// it in row 10 (the same measure puts `running-right` in row 1).
+    pub fn look_towards_right(self) -> bool {
+        matches!(self, PetState::LookRow9)
+    }
+
+    pub fn look_towards_left(self) -> bool {
+        matches!(self, PetState::LookRow10)
+    }
+
+    /// The look row that turns the pet towards `dx` (negative = screen left).
+    pub fn look_towards(dx: f32) -> Option<PetState> {
+        if dx > 0.0 {
+            Some(PetState::LookRow9)
+        } else if dx < 0.0 {
+            Some(PetState::LookRow10)
+        } else {
+            None
+        }
     }
 
     /// Locomotion states are driven by the auto-walk engine as the base state.
@@ -224,16 +251,30 @@ pub fn official_durations(state: PetState) -> Vec<f32> {
 }
 
 /// Build every animation available for the given geometry and manifest.
+///
+/// `occupancy` is an optional `columns * rows` bitmap (`true` = the cell holds
+/// at least one opaque pixel). When it is supplied the engine uses the number
+/// of frames a pet actually drew instead of the frame count of the official
+/// table, which keeps community pets and re-published Codex pets in sync.
 pub fn resolve_animations(
     frame: FrameSpec,
     manifest: &PetManifest,
+) -> BTreeMap<PetState, Animation> {
+    resolve_animations_with_occupancy(frame, manifest, None)
+}
+
+/// Occupancy-aware variant of [`resolve_animations`].
+pub fn resolve_animations_with_occupancy(
+    frame: FrameSpec,
+    manifest: &PetManifest,
+    occupancy: Option<&[bool]>,
 ) -> BTreeMap<PetState, Animation> {
     let mut out = BTreeMap::new();
     for state in PetState::ALL {
         if !frame.has_row(state.requires_row()) {
             continue;
         }
-        if let Some(anim) = resolve_one(state, frame, manifest) {
+        if let Some(anim) = resolve_one(state, frame, manifest, occupancy) {
             out.insert(state, anim);
         }
     }
@@ -254,7 +295,12 @@ fn track_key(
         .or_else(|| manifest.animations.get(&snake.replace('_', "")))
 }
 
-fn resolve_one(state: PetState, frame: FrameSpec, manifest: &PetManifest) -> Option<Animation> {
+fn resolve_one(
+    state: PetState,
+    frame: FrameSpec,
+    manifest: &PetManifest,
+    occupancy: Option<&[bool]>,
+) -> Option<Animation> {
     let fallback = track_key(manifest, state)
         .and_then(|t| t.fallback.as_deref())
         .and_then(PetState::from_name)
@@ -287,9 +333,18 @@ fn resolve_one(state: PetState, frame: FrameSpec, manifest: &PetManifest) -> Opt
     }
 
     // Fall back to the official Codex timing table, clipped to the real grid.
-    let durations = official_durations(state);
+    // The frame count comes from the artwork when the caller supplied an
+    // occupancy bitmap, so pets with fewer or extra frames still animate in
+    // their own length instead of the length of the reference sheet.
     let available = frame.columns as usize;
-    let durations = durations.into_iter().take(available).collect::<Vec<_>>();
+    let official = official_durations(state);
+    // Without an occupancy bitmap the official frame count is authoritative;
+    // with one, the artwork decides and the pattern is reshaped to match.
+    let drawn = match occupancy.and_then(|cells| drawn_frames(state.row(), frame, cells)) {
+        Some(count) => count.clamp(1, available),
+        None => official.len().min(available),
+    };
+    let durations = adapt_durations(official, drawn);
     if durations.is_empty() {
         return None;
     }
@@ -302,6 +357,66 @@ fn resolve_one(state: PetState, frame: FrameSpec, manifest: &PetManifest) -> Opt
         loop_anim,
         fallback,
     ))
+}
+
+/// Number of cells drawn from column 0 of `row` (contiguous run of opaque or
+/// partially opaque cells). Returns `None` when the row is completely empty.
+fn drawn_frames(row: u32, frame: FrameSpec, occupancy: &[bool]) -> Option<usize> {
+    if row >= frame.rows || frame.columns == 0 {
+        return None;
+    }
+    let mut count = 0;
+    for col in 0..frame.columns {
+        let index = (row * frame.columns + col) as usize;
+        if occupancy.get(index).copied().unwrap_or(false) {
+            count += 1;
+        } else {
+            break;
+        }
+    }
+    (count > 0).then_some(count)
+}
+
+/// Reshape the official duration pattern so it covers exactly `count` frames.
+///
+/// The reference sheet keeps a longer hold on the final frame of most rows, so
+/// growing the pattern repeats the dominant middle duration and shrinking it
+/// drops middle frames while preserving that hold.
+pub fn adapt_durations(patterns: Vec<f32>, count: usize) -> Vec<f32> {
+    if count == 0 || patterns.is_empty() {
+        return Vec::new();
+    }
+    if count == patterns.len() {
+        return patterns;
+    }
+    let last = *patterns.last().expect("patterns is not empty");
+    let middle = median_duration(&patterns[..patterns.len() - 1]).unwrap_or(last);
+    let mut out = Vec::with_capacity(count);
+    if count == 1 {
+        out.push(last);
+        return out;
+    }
+    let body = &patterns[..patterns.len() - 1];
+    out.extend(body.iter().take(count - 1).copied());
+    while out.len() < count - 1 {
+        out.push(middle);
+    }
+    out.push(last);
+    out
+}
+
+/// Median of a duration slice, ignoring non-finite entries.
+fn median_duration(values: &[f32]) -> Option<f32> {
+    let mut sorted = values
+        .iter()
+        .copied()
+        .filter(|value| value.is_finite())
+        .collect::<Vec<_>>();
+    if sorted.is_empty() {
+        return None;
+    }
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    Some(sorted[sorted.len() / 2])
 }
 
 /// A state change emitted by the engine.
@@ -343,8 +458,34 @@ impl PetEngine {
         }
     }
 
+    /// Build an engine that only animates the cells a pet actually drew.
+    pub fn from_atlas(atlas: &PetAtlas, manifest: &PetManifest) -> Self {
+        Self {
+            frame: atlas.frame,
+            animations: resolve_animations_with_occupancy(
+                atlas.frame,
+                manifest,
+                Some(&atlas.occupancy()),
+            ),
+            base: PetState::Idle,
+            active: None,
+        }
+    }
+
     pub fn current(&self) -> PetState {
         self.active.as_ref().map(|a| a.state).unwrap_or(self.base)
+    }
+
+    /// Play the V2 look row that turns the pet towards the cursor.
+    ///
+    /// `dx` is the cursor offset from the pet centre in logical pixels; the
+    /// glance lasts exactly one animation pass and then falls back to base.
+    pub fn glance(&mut self, dx: f32, now: Instant) -> Option<PetState> {
+        let state = PetState::look_towards(dx)?;
+        let animation = self.animations.get(&state)?;
+        let ttl = Duration::from_secs_f32((animation.total_ms / 1000.0).max(0.2));
+        self.raise(state, "gaze", None, Some(ttl), now)
+            .map(|transition| transition.state)
     }
 
     pub fn base(&self) -> PetState {
@@ -535,6 +676,71 @@ mod tests {
         let e = engine(11);
         assert!(e.animation(PetState::LookRow9).is_some());
         assert!(e.animation(PetState::LookRow10).is_some());
+    }
+
+    #[test]
+    fn adapt_durations_preserves_the_final_hold() {
+        // The reference idle row has six frames; the shipped Codex pet draws
+        // seven. The extra frame inherits the median middle duration.
+        assert_eq!(
+            adapt_durations(vec![280.0, 110.0, 110.0, 140.0, 140.0, 320.0], 7),
+            vec![280.0, 110.0, 110.0, 140.0, 140.0, 140.0, 320.0]
+        );
+        // Shrinking keeps the hold on the last drawn frame.
+        assert_eq!(
+            adapt_durations(vec![280.0, 110.0, 110.0, 140.0, 140.0, 320.0], 3),
+            vec![280.0, 110.0, 320.0]
+        );
+        assert_eq!(adapt_durations(vec![140.0, 280.0], 2), vec![140.0, 280.0]);
+    }
+
+    #[test]
+    fn occupancy_limits_frames_to_the_drawn_cells() {
+        // Row 0 draws five cells, every other row draws one; the pet is a
+        // 3-row grid so only idle and the two running rows exist.
+        let frame = FrameSpec::new(8, 3);
+        let mut occupancy = vec![false; (frame.columns * frame.rows) as usize];
+        for col in 0..5 {
+            occupancy[col as usize] = true;
+        }
+        occupancy[frame.columns as usize] = true;
+        occupancy[(frame.columns * 2) as usize] = true;
+        let manifest = PetManifest::from_json_str(r#"{"id":"t"}"#).unwrap();
+        let animations = resolve_animations_with_occupancy(frame, &manifest, Some(&occupancy));
+        let idle = animations.get(&PetState::Idle).unwrap();
+        assert_eq!(idle.durations_ms.len(), 5);
+        assert_eq!(idle.sprites, vec![0, 1, 2, 3, 4]);
+        assert_eq!(*idle.durations_ms.last().unwrap(), 320.0);
+        let running = animations.get(&PetState::RunningRight).unwrap();
+        assert_eq!(running.sprites, vec![8]);
+    }
+
+    #[test]
+    fn glance_plays_the_look_row_for_the_cursor_side() {
+        let mut e = engine(11);
+        let now = Instant::now();
+        assert_eq!(e.glance(40.0, now), Some(PetState::LookRow9));
+        assert_eq!(e.current(), PetState::LookRow9);
+        // A glance never interrupts a higher-priority event.
+        let mut busy = engine(11);
+        busy.raise(PetState::Running, "agent", None, None, now);
+        assert_eq!(busy.glance(-40.0, now), None);
+        assert_eq!(busy.current(), PetState::Running);
+        // V1 atlases have no look rows, so the glance is a no-op.
+        let mut narrow = engine(9);
+        assert_eq!(narrow.glance(40.0, now), None);
+        assert_eq!(narrow.current(), PetState::Idle);
+    }
+
+    #[test]
+    fn look_rows_point_away_from_the_shipped_pet_measurement() {
+        assert!(PetState::LookRow9.look_towards_right());
+        assert!(PetState::LookRow10.look_towards_left());
+        assert_eq!(PetState::look_towards(-12.0), Some(PetState::LookRow10));
+        assert_eq!(PetState::look_towards(12.0), Some(PetState::LookRow9));
+        assert_eq!(PetState::look_towards(0.0), None);
+        assert!(PetState::LookRow9.is_one_shot());
+        assert!(PetState::LookRow10.is_one_shot());
     }
 
     #[test]

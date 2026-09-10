@@ -12,5 +12,6 @@ pub mod memory;
 pub mod persona;
 pub mod pet;
 pub mod secrets;
+pub mod state_server;
 
 pub use error::{Error, Result};

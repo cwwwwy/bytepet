@@ -123,6 +123,51 @@ impl AlphaMask {
         let slice = &self.data[cell_index * per_cell..(cell_index + 1) * per_cell];
         slice.iter().all(|b| *b == 0)
     }
+
+    /// Like [`Self::opaque_at_cell`], but a point also counts as solid when a
+    /// sample within `radius` mask cells of it is solid.
+    ///
+    /// Pixel-perfect click-through is great until the cursor is one pixel off
+    /// an anti-aliased edge, so the window uses a one-cell halo (4 logical
+    /// pixels) when deciding whether to keep receiving mouse input.
+    pub fn opaque_at_cell_dilated(&self, sprite_index: u32, x: f32, y: f32, radius: u32) -> bool {
+        if self.opaque_at_cell(sprite_index, x, y) {
+            return true;
+        }
+        if radius == 0 || self.columns == 0 || self.rows == 0 {
+            return false;
+        }
+        let row = sprite_index / self.columns;
+        let col = sprite_index % self.columns;
+        if row >= self.rows || col >= self.columns {
+            return false;
+        }
+        if x < 0.0 || y < 0.0 || x >= self.cell_width as f32 || y >= self.cell_height as f32 {
+            return false;
+        }
+        let step = self.scale.max(1) as f32;
+        let offsets = radius as i32;
+        for oy in -offsets..=offsets {
+            for ox in -offsets..=offsets {
+                if ox == 0 && oy == 0 {
+                    continue;
+                }
+                let nx = x + ox as f32 * step;
+                let ny = y + oy as f32 * step;
+                if nx < 0.0
+                    || ny < 0.0
+                    || nx >= self.cell_width as f32
+                    || ny >= self.cell_height as f32
+                {
+                    continue;
+                }
+                if self.opaque_at_cell(sprite_index, nx, ny) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
 }
 
 /// A decoded pet spritesheet plus its hit mask.
@@ -204,6 +249,15 @@ impl PetAtlas {
         self.mask.cell_is_empty(sprite_index)
     }
 
+    /// `columns * rows` bitmap: `true` when the cell holds at least one opaque
+    /// pixel. The animation engine uses it to follow the frames a pet actually
+    /// drew instead of assuming the art fills the whole grid.
+    pub fn occupancy(&self) -> Vec<bool> {
+        (0..self.frame.cell_count())
+            .map(|index| !self.cell_is_empty(index))
+            .collect()
+    }
+
     /// Unused cells (beyond the state's frame list) should be transparent.
     pub fn unused_cell_warnings(&self, used: &[u32]) -> Vec<String> {
         let mut warnings = Vec::new();
@@ -253,6 +307,20 @@ mod tests {
         let frame = FrameSpec::new(2, 2);
         let img = RgbaImage::new(10, 10);
         assert!(PetAtlas::from_image(img, frame, PathBuf::from("x")).is_err());
+    }
+
+    #[test]
+    fn dilated_hits_cover_the_antialiased_edge() {
+        let frame = FrameSpec::new(2, 1);
+        let atlas = PetAtlas::from_image(synthetic(frame), frame, PathBuf::from("x")).unwrap();
+        // The 20x20 px square ends at x=19; a point just outside it is only a
+        // hit when the halo is applied.
+        assert!(!atlas.mask.opaque_at_cell(0, 22.0, 10.0));
+        assert!(atlas.mask.opaque_at_cell_dilated(0, 22.0, 10.0, 1));
+        // The halo never leaks into a fully transparent sprite.
+        assert!(!atlas.mask.opaque_at_cell_dilated(1, 22.0, 10.0, 1));
+        // A radius of zero keeps the exact mask.
+        assert!(!atlas.mask.opaque_at_cell_dilated(0, 22.0, 10.0, 0));
     }
 
     #[test]

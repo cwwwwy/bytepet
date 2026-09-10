@@ -135,6 +135,23 @@ pub struct WindowPosition {
     pub y: f32,
 }
 
+/// The local state protocol hooks use to drive the pet.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct StateServerConfig {
+    pub enabled: bool,
+    pub port: u16,
+}
+
+impl Default for StateServerConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            port: crate::state_server::DEFAULT_PORT,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct AppConfig {
@@ -147,6 +164,7 @@ pub struct AppConfig {
     pub deepseek: DeepSeekConfig,
     pub greeting: GreetingConfig,
     pub memory: MemoryConfig,
+    pub state_server: StateServerConfig,
 }
 
 impl Default for AppConfig {
@@ -161,6 +179,7 @@ impl Default for AppConfig {
             deepseek: DeepSeekConfig::default(),
             greeting: GreetingConfig::default(),
             memory: MemoryConfig::default(),
+            state_server: StateServerConfig::default(),
         }
     }
 }
@@ -205,7 +224,12 @@ pub struct AppPaths {
 }
 
 impl AppPaths {
+    /// `BYTEPET_HOME` overrides the platform config directory, which keeps
+    /// portable installs and smoke tests out of the user's real data.
     pub fn default_dir() -> PathBuf {
+        if let Some(dir) = std::env::var_os("BYTEPET_HOME") {
+            return PathBuf::from(dir);
+        }
         dirs::config_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join("BytePet")
@@ -229,7 +253,9 @@ impl AppPaths {
             &self.personas_dir,
             &self.logs_dir,
         ] {
-            std::fs::create_dir_all(dir)?;
+            if !dir.is_dir() {
+                std::fs::create_dir_all(dir)?;
+            }
         }
         Ok(())
     }

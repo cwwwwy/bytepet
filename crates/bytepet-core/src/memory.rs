@@ -41,6 +41,7 @@ pub enum EventKind {
     UserMessage,
     PetGreeting,
     PetReaction,
+    PetChanged,
     CodexStatus,
     IdleReturn,
 }
@@ -138,6 +139,7 @@ impl EventKind {
             EventKind::UserMessage => "用户说了一句话",
             EventKind::PetGreeting => "宠物主动问候",
             EventKind::PetReaction => "宠物做出了回应",
+            EventKind::PetChanged => "更换了宠物",
             EventKind::CodexStatus => "Codex 状态变化",
             EventKind::IdleReturn => "用户离开后回来",
         }

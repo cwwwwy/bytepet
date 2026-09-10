@@ -9,6 +9,7 @@ use bytepet_core::memory::{EventKind, PetMemory};
 use bytepet_core::persona::{Persona, PersonaStore};
 use bytepet_core::pet::state::{PetEngine, PetState};
 use bytepet_core::pet::{PetAtlas, PetEntry, PetLibrary};
+use bytepet_core::state_server::{Health, StateEvent, StateServer};
 use eframe::egui;
 
 use crate::greeting;
@@ -31,7 +32,6 @@ pub struct BytePetApp {
     greeting_rx: Option<Receiver<std::result::Result<String, String>>>,
     greeting_inflight: bool,
     last_greeting_at: Option<Instant>,
-    last_tick: Instant,
     fonts_installed: bool,
     pet_visible: bool,
     last_passthrough: Option<bool>,
@@ -45,10 +45,25 @@ pub struct BytePetApp {
     pending_single_click: bool,
     menu_open: bool,
     menu_pos: Option<egui::Pos2>,
+    /// Pet library (Codex / UniPet / local roots) and its current contents.
+    library: PetLibrary,
+    pets: Vec<PetEntry>,
+    selected_pet: Option<String>,
+    pet_preview: Option<(String, egui::TextureHandle)>,
+    /// Which side the cursor was on when the pet last glanced (-1/0/1).
+    glance_side: i8,
+    last_glance_at: Option<Instant>,
     tray: Option<tray_icon::TrayIcon>,
     tray_open_settings_id: Option<tray_icon::menu::MenuId>,
     tray_toggle_id: Option<tray_icon::menu::MenuId>,
     tray_quit_id: Option<tray_icon::menu::MenuId>,
+    tray_events: Option<Receiver<tray_icon::menu::MenuEvent>>,
+    settings_pos: Option<egui::Pos2>,
+    /// Local state protocol (Codex hooks -> pet).
+    state_server: Option<StateServer>,
+    state_events: Option<Receiver<StateEvent>>,
+    state_server_port: u16,
+    last_health_at: Instant,
 }
 
 struct PetRuntime {
@@ -95,11 +110,12 @@ impl BytePetApp {
             }
             config.default_pet_seeded = true;
         }
+        let pets = library.list();
         let entry = config
             .active_pet
             .as_ref()
-            .and_then(|id| library.get(id))
-            .or_else(|| library.list().into_iter().next());
+            .and_then(|id| pets.iter().find(|pet| &pet.id == id).cloned())
+            .or_else(|| pets.first().cloned());
         let pet = match entry {
             Some(entry) => {
                 config.active_pet = Some(entry.id.clone());
@@ -120,6 +136,8 @@ impl BytePetApp {
 
         let greeting_draft = persona.greeting.clone().unwrap_or_default();
         let fallback = greeting::fallback_greeting(&persona);
+        let selected_pet = config.active_pet.clone();
+        let state_port = config.state_server.port;
         let mut app = Self {
             paths,
             config,
@@ -138,7 +156,6 @@ impl BytePetApp {
             greeting_rx: None,
             greeting_inflight: false,
             last_greeting_at: None,
-            last_tick: Instant::now(),
             fonts_installed: false,
             pet_visible: true,
             last_passthrough: None,
@@ -152,17 +169,30 @@ impl BytePetApp {
             pending_single_click: false,
             menu_open: false,
             menu_pos: None,
+            selected_pet,
+            pet_preview: None,
+            glance_side: 0,
+            last_glance_at: None,
+            library,
+            pets,
             tray: None,
             tray_open_settings_id: None,
             tray_toggle_id: None,
             tray_quit_id: None,
+            tray_events: None,
+            settings_pos: None,
+            state_server: None,
+            state_events: None,
+            state_server_port: state_port,
+            last_health_at: Instant::now(),
         };
         let _ = app.trigger_greeting("startup", true);
+        app.sync_state_server();
         Ok(app)
     }
 
-    pub fn initialize(&mut self, _creation_context: &eframe::CreationContext<'_>) {
-        self.install_tray();
+    pub fn initialize(&mut self, creation_context: &eframe::CreationContext<'_>) {
+        self.install_tray(creation_context.egui_ctx.clone());
     }
 
     fn pet_size(&self) -> egui::Vec2 {
@@ -228,8 +258,9 @@ impl BytePetApp {
                 let elapsed_ms = pet.anim_started.elapsed().as_secs_f32() * 1000.0;
                 let sprite = pet.current_sprite(elapsed_ms);
                 if let Some(texture_id) = pet.texture_for(ui.ctx(), sprite) {
-                    let image =
-                        egui::Image::new(egui::load::SizedTexture::new(texture_id, pet.cell_size));
+                    // SizedTexture uses `ImageFit::Exact`, so hand it the scaled
+                    // size or the 大小 setting would be ignored.
+                    let image = egui::Image::new(egui::load::SizedTexture::new(texture_id, cell));
                     ui.put(pet_rect, image);
                 }
 
@@ -324,6 +355,7 @@ impl BytePetApp {
         }
         if open_settings {
             self.settings_open = true;
+            self.settings_pos = None;
         }
         if quit {
             root_ui
@@ -344,17 +376,49 @@ impl BytePetApp {
 
     fn show_settings_viewport(&mut self, ctx: &egui::Context) {
         let viewport_id = egui::ViewportId::from_hash_of("bytepet-settings");
+        let size = egui::vec2(640.0, 720.0);
+        // Place the settings window next to the pet, clamped to the monitor,
+        // the first time it opens. After that the user owns the position.
+        let position = match self.settings_pos {
+            Some(position) => position,
+            None => {
+                let position = self.default_settings_position(ctx, size);
+                self.settings_pos = Some(position);
+                position
+            }
+        };
         let builder = egui::ViewportBuilder::default()
             .with_title("BytePet 设置")
-            .with_inner_size([620.0, 720.0])
+            .with_inner_size([size.x, size.y])
             .with_min_inner_size([420.0, 480.0])
             .with_decorations(true)
             .with_transparent(false)
             .with_taskbar(true)
+            .with_position([position.x, position.y])
             .with_resizable(true);
         ctx.show_viewport_immediate(viewport_id, builder, |ui, _class| {
             self.draw_settings(ui);
         });
+    }
+
+    /// Bottom-right of the pet when there is room, otherwise the closest spot
+    /// that still fits on the monitor.
+    fn default_settings_position(&self, ctx: &egui::Context, size: egui::Vec2) -> egui::Pos2 {
+        let (monitor, pet_rect) =
+            ctx.input(|input| (input.viewport().monitor_size, input.viewport().outer_rect));
+        let monitor = monitor.unwrap_or(egui::vec2(1280.0, 800.0));
+        let pet_rect =
+            pet_rect.unwrap_or_else(|| egui::Rect::from_min_size(egui::Pos2::ZERO, size));
+        let gap = 12.0;
+        let right = pet_rect.right() + gap;
+        let left = pet_rect.left() - size.x - gap;
+        let x = if right + size.x <= monitor.x {
+            right
+        } else {
+            left.max(0.0)
+        };
+        let y = (pet_rect.bottom() - size.y).clamp(0.0, (monitor.y - size.y).max(0.0));
+        egui::pos2(x.clamp(0.0, (monitor.x - size.x).max(0.0)), y)
     }
 
     fn draw_settings(&mut self, root_ui: &mut egui::Ui) {
@@ -363,6 +427,7 @@ impl BytePetApp {
             .input(|input| input.viewport().close_requested())
         {
             self.settings_open = false;
+            self.settings_pos = None;
             return;
         }
         egui::CentralPanel::default().show(root_ui, |ui| {
@@ -379,6 +444,93 @@ impl BytePetApp {
                 ui.visuals().text_color(),
             );
             ui.separator();
+
+            let mut switch_to: Option<String> = None;
+            ui.collapsing("宠物", |ui| {
+                let pets: Vec<(String, String, &'static str)> = self
+                    .pets
+                    .iter()
+                    .map(|pet| {
+                        (
+                            pet.id.clone(),
+                            pet.display_name.clone(),
+                            pet.root.label(),
+                        )
+                    })
+                    .collect();
+                ui.horizontal(|ui| {
+                    ui.label(format!(
+                        "当前：{}（共 {} 个，来自 ~/.codex/pets、~/.unipet/pets 与本地库）",
+                        self.active_pet_name(),
+                        pets.len()
+                    ));
+                    if ui.button("重新扫描").clicked() {
+                        self.pets = self.library.list();
+                        self.pet_preview = None;
+                        self.status = format!("发现 {} 个宠物", self.pets.len());
+                    }
+                });
+                if pets.is_empty() {
+                    ui.label("没有找到宠物包。把 pet.json + spritesheet 放进 ~/.codex/pets 即可。");
+                }
+                egui::ScrollArea::vertical()
+                    .max_height(150.0)
+                    .id_salt("pet-list")
+                    .show(ui, |ui| {
+                        for (id, name, root) in &pets {
+                            let selected = self.selected_pet.as_deref() == Some(id.as_str());
+                            if ui.radio(selected, format!("{name}  ·  {id}  ({root})")).clicked() {
+                                self.selected_pet = Some(id.clone());
+                            }
+                        }
+                    });
+
+                if let Some(selected) = self.selected_pet.clone() {
+                    let dirty = self.pet_preview.as_ref().map(|(id, _)| id.clone())
+                        != Some(selected.clone());
+                    if dirty {
+                        self.pet_preview = self
+                            .pets
+                            .iter()
+                            .find(|pet| pet.id == selected)
+                            .and_then(|pet| {
+                                pet_preview_texture(ui.ctx(), pet)
+                                    .map(|texture| (pet.id.clone(), texture))
+                            });
+                    }
+                    if let Some((id, texture)) = &self.pet_preview {
+                        if id == &selected {
+                            ui.horizontal(|ui| {
+                                ui.add(egui::Image::new(egui::load::SizedTexture::new(
+                                    texture.id(),
+                                    egui::vec2(96.0, 104.0),
+                                )));
+                                ui.vertical(|ui| {
+                                    let frame = self
+                                        .pets
+                                        .iter()
+                                        .find(|pet| pet.id == selected)
+                                        .map(|pet| pet.frame);
+                                    if let Some(frame) = frame {
+                                        ui.label(format!(
+                                            "{} 列 × {} 行，单元格 {}×{}",
+                                            frame.columns, frame.rows, frame.width, frame.height
+                                        ));
+                                    }
+                                    if selected == self.active_pet_id() {
+                                        ui.label("已经是当前宠物");
+                                    } else if ui.button("切换到这个宠物").clicked() {
+                                        switch_to = Some(selected.clone());
+                                    }
+                                });
+                            });
+                        }
+                    }
+                }
+            });
+            if let Some(id) = switch_to {
+                self.switch_pet(&id);
+            }
 
             ui.collapsing("人格", |ui| {
                 egui::Grid::new("persona-grid")
@@ -410,6 +562,13 @@ impl BytePetApp {
             });
 
             ui.collapsing("宠物行为", |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("大小");
+                    ui.add(
+                        egui::Slider::new(&mut self.config.window.scale, 0.5..=2.0)
+                            .fixed_decimals(2),
+                    );
+                });
                 ui.checkbox(&mut self.config.window.auto_walk.enabled, "启用活动提醒");
                 egui::Grid::new("auto-walk-grid")
                     .num_columns(2)
@@ -455,6 +614,35 @@ impl BytePetApp {
                         ui.end_row();
                     });
                 ui.checkbox(&mut self.config.window.click_through, "像素级点击穿透");
+            });
+
+            ui.collapsing("状态协议", |ui| {
+                ui.checkbox(
+                    &mut self.config.state_server.enabled,
+                    "允许本地程序驱动宠物（Codex hooks）",
+                );
+                ui.horizontal(|ui| {
+                    ui.label("端口");
+                    ui.add(
+                        egui::DragValue::new(&mut self.config.state_server.port)
+                            .range(1024..=65535),
+                    );
+                    let running = match &self.state_server {
+                        Some(server) => format!("监听中 127.0.0.1:{}", server.port()),
+                        None => "未运行".to_string(),
+                    };
+                    ui.label(running);
+                });
+                if let Some(server) = &self.state_server {
+                    ui.label(format!(
+                        "curl -XPOST http://127.0.0.1:{}/state -H \"content-type: application/json\" -d \"{{\\\"source\\\":\\\"codex\\\",\\\"state\\\":\\\"running\\\",\\\"message\\\":\\\"跑测试中\\\"}}\"",
+                        server.port()
+                    ));
+                }
+                ui.label(
+                    "状态名：idle / running / waiting / failed / review / waving / jumping / running-left / running-right",
+                );
+                ui.label("改完端口后点「保存」生效。");
             });
 
             ui.collapsing("DeepSeek", |ui| {
@@ -566,10 +754,163 @@ impl BytePetApp {
             self.status = format!("保存配置失败：{error}");
             return;
         }
+        self.sync_state_server();
+        self.publish_health();
         self.status = "已保存".to_string();
     }
 
-    fn install_tray(&mut self) {
+    /// Start, stop or restart the local state protocol to match the config.
+    fn sync_state_server(&mut self) {
+        let wanted = self.config.state_server.enabled;
+        let port = self.config.state_server.port;
+        let running = self.state_server.is_some();
+        if running && (!wanted || port != self.state_server_port) {
+            self.state_server = None;
+            self.state_events = None;
+        }
+        if !wanted || self.state_server.is_some() {
+            if !wanted {
+                self.status = "状态服务已关闭".to_string();
+            }
+            return;
+        }
+        let (sender, receiver) = mpsc::channel();
+        match StateServer::start(port, sender) {
+            Ok(server) => {
+                tracing::info!(port = server.port(), "state protocol listening");
+                self.state_server_port = server.port();
+                self.state_server = Some(server);
+                self.state_events = Some(receiver);
+                self.status = format!(
+                    "状态协议已监听 http://127.0.0.1:{}/state",
+                    self.state_server_port
+                );
+                self.publish_health();
+            }
+            Err(error) => {
+                tracing::warn!(%error, "cannot start the state protocol");
+                self.state_server = None;
+                self.state_events = None;
+                self.status = format!("状态协议启动失败：{error}");
+            }
+        }
+    }
+
+    /// Publish the current pet / persona / state snapshot for `GET /health`.
+    fn publish_health(&self) {
+        let Some(server) = &self.state_server else {
+            return;
+        };
+        let (pet, pet_path) = self
+            .pet
+            .as_ref()
+            .map(|pet| (pet.entry.display_name.clone(), Some(pet.entry.dir.clone())))
+            .unwrap_or_else(|| ("".to_string(), None));
+        let state = self
+            .pet
+            .as_ref()
+            .map(|pet| pet.engine.current().name().to_string())
+            .unwrap_or_default();
+        server.set_health(Health {
+            ok: true,
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            pet,
+            pet_path,
+            persona: self.persona.id.clone(),
+            state,
+            pets: self.pets.iter().map(|pet| pet.id.clone()).collect(),
+            sources: Vec::new(),
+        });
+    }
+
+    /// Apply state events pushed by hooks.
+    fn poll_state_events(&mut self, ctx: &egui::Context) {
+        let Some(receiver) = &self.state_events else {
+            return;
+        };
+        let mut events = Vec::new();
+        while let Ok(event) = receiver.try_recv() {
+            events.push(event);
+        }
+        if events.is_empty() {
+            return;
+        }
+        for event in events {
+            let Some(state) = event.pet_state() else {
+                continue;
+            };
+            tracing::info!(source = %event.source, state = state.name(), "state event");
+            let message = event.message_clipped();
+            if let Some(text) = &message {
+                self.show_bubble(text.clone());
+            }
+            if let Some(pet) = &mut self.pet {
+                let source = format!("hook:{}", event.source);
+                pet.engine
+                    .raise(state, &source, message.clone(), event.ttl(), Instant::now());
+                pet.anim_started = Instant::now();
+                pet.last_state = pet.engine.current();
+            }
+            let _ = self.memory.record_event(
+                &self.persona.id,
+                EventKind::CodexStatus,
+                Some(match &message {
+                    Some(text) => format!("{}：{}", state.name(), text),
+                    None => state.name().to_string(),
+                }),
+            );
+            self.last_user_action = Instant::now();
+            ctx.request_repaint();
+        }
+        self.publish_health();
+    }
+
+    fn active_pet_id(&self) -> String {
+        self.pet
+            .as_ref()
+            .map(|pet| pet.entry.id.clone())
+            .unwrap_or_default()
+    }
+
+    fn active_pet_name(&self) -> String {
+        self.pet
+            .as_ref()
+            .map(|pet| pet.entry.display_name.clone())
+            .unwrap_or_else(|| "（无）".to_string())
+    }
+
+    /// Load another pet from the library and swap it in without restarting.
+    fn switch_pet(&mut self, id: &str) {
+        let Some(entry) = self.pets.iter().find(|pet| pet.id == id).cloned() else {
+            self.status = format!("找不到宠物 {id}");
+            return;
+        };
+        match PetRuntime::load(entry) {
+            Ok(runtime) => {
+                tracing::info!(pet = %id, "switching pet");
+                self.pet = Some(runtime);
+                self.config.active_pet = Some(id.to_string());
+                self.selected_pet = Some(id.to_string());
+                self.pet_preview = None;
+                self.walk_until = None;
+                self.walk_origin_x = None;
+                self.last_passthrough = None;
+                if let Err(error) = self.config.save(&self.paths.config_file) {
+                    self.status = format!("已切换，但保存配置失败：{error}");
+                } else {
+                    self.status = format!("已切换到 {id}");
+                }
+                let _ = self.memory.record_event(
+                    &self.persona.id,
+                    EventKind::PetChanged,
+                    Some(id.to_string()),
+                );
+            }
+            Err(error) => self.status = format!("切换宠物失败：{error:#}"),
+        }
+    }
+
+    fn install_tray(&mut self, ctx: egui::Context) {
         use tray_icon::menu::{Menu, MenuItem, PredefinedMenuItem};
 
         let menu = Menu::new();
@@ -606,13 +947,33 @@ impl BytePetApp {
             }
             Err(error) => tracing::warn!(%error, "cannot create tray icon"),
         }
+
+        // Menu events arrive on the window/message thread, so hand them to the
+        // UI through a channel we own instead of polling the shared receiver
+        // (which the tray crate only fills when no handler is installed).
+        let (sender, receiver) = mpsc::channel();
+        tray_icon::menu::MenuEvent::set_event_handler(Some(
+            move |event: tray_icon::menu::MenuEvent| {
+                let _ = sender.send(event);
+                ctx.request_repaint();
+            },
+        ));
+        self.tray_events = Some(receiver);
     }
 
     fn poll_tray(&mut self, ctx: &egui::Context) {
-        while let Ok(event) = tray_icon::menu::MenuEvent::receiver().try_recv() {
+        let Some(receiver) = &self.tray_events else {
+            return;
+        };
+        let mut events = Vec::new();
+        while let Ok(event) = receiver.try_recv() {
+            events.push(event);
+        }
+        for event in events {
             tracing::info!(id = ?event.id, "tray menu event");
             if Some(&event.id) == self.tray_open_settings_id.as_ref() {
                 self.settings_open = true;
+                self.settings_pos = None;
                 ctx.request_repaint();
             } else if Some(&event.id) == self.tray_toggle_id.as_ref() {
                 let visible = !self.pet_visible;
@@ -642,6 +1003,15 @@ impl BytePetApp {
 
     fn update_auto_walk(&mut self, ctx: &egui::Context, frame: &eframe::Frame) {
         if self.settings_open || !self.pet_visible || !self.config.window.auto_walk.enabled {
+            return;
+        }
+        // A hook state, greeting or click animation owns the pet; the walk
+        // reminder waits until the pet is back to its base animation.
+        if self
+            .pet
+            .as_ref()
+            .is_some_and(|pet| pet.engine.current() != pet.engine.base())
+        {
             return;
         }
         let cfg = self.config.window.auto_walk.clone();
@@ -708,8 +1078,97 @@ impl BytePetApp {
         });
     }
 
+    /// Expire timed states (click wave, greeting, hook TTLs) so the pet always
+    /// returns to its base animation.
+    fn update_pet_timers(&mut self) {
+        let now = Instant::now();
+        let Some(pet) = &mut self.pet else {
+            return;
+        };
+        if pet.engine.tick(now).is_some() {
+            pet.anim_started = now;
+            pet.last_state = pet.engine.current();
+        }
+    }
+
+    /// Let the V2 look rows follow the cursor: crossing to one side of the pet
+    /// plays that side's turn cycle exactly once.
+    fn update_glance(&mut self, frame: &eframe::Frame) {
+        if self.settings_open || !self.pet_visible {
+            self.glance_side = 0;
+            return;
+        }
+        let Some(pet) = &self.pet else {
+            return;
+        };
+        if pet.engine.base().is_locomotion() || pet.engine.animation(PetState::LookRow9).is_none() {
+            self.glance_side = 0;
+            return;
+        }
+        let Some(window) = frame.winit_window() else {
+            return;
+        };
+        let (Some((cursor_x, cursor_y)), Ok(position), size) = (
+            crate::platform::global_cursor_position(),
+            window.outer_position(),
+            window.outer_size(),
+        ) else {
+            return;
+        };
+        let scale = window.scale_factor().max(0.1);
+        let pet_size = self.pet_size();
+        let window_width = size.width as f64 / scale;
+        let window_height = size.height as f64 / scale;
+        let pet_left =
+            position.x as f64 / scale + (window_width - pet_size.x as f64).max(0.0) * 0.5;
+        let pet_top = position.y as f64 / scale + (window_height - pet_size.y as f64).max(0.0);
+        let dx = cursor_x - (pet_left + pet_size.x as f64 * 0.5);
+        let dy = cursor_y - (pet_top + pet_size.y as f64 * 0.5);
+        // Only glance when the cursor is actually near the pet.
+        let reach = pet_size.x.max(pet_size.y) as f64 * 2.5;
+        if dx.abs() > reach || dy.abs() > reach {
+            self.glance_side = 0;
+            return;
+        }
+        let dead_zone = pet_size.x as f64 * 0.35;
+        let side = if dx > dead_zone {
+            1
+        } else if dx < -dead_zone {
+            -1
+        } else {
+            0
+        };
+        if side == self.glance_side {
+            return;
+        }
+        self.glance_side = side;
+        if side == 0 {
+            return;
+        }
+        if self
+            .last_glance_at
+            .is_some_and(|last| last.elapsed() < Duration::from_millis(900))
+        {
+            return;
+        }
+        let now = Instant::now();
+        let raised = self
+            .pet
+            .as_mut()
+            .is_some_and(|pet| pet.engine.glance(dx as f32, now).is_some());
+        if raised {
+            if let Some(pet) = &mut self.pet {
+                pet.anim_started = now;
+                pet.last_state = pet.engine.current();
+            }
+            self.last_glance_at = Some(now);
+        }
+    }
+
     fn update_passthrough(&mut self, ctx: &egui::Context, frame: &eframe::Frame) {
-        if self.settings_open || !self.pet_visible || !self.config.window.click_through {
+        // The settings window is a separate native window, so the pet keeps its
+        // per-pixel click-through while the settings are open.
+        if !self.pet_visible || !self.config.window.click_through {
             let ignore = !self.pet_visible;
             if self.last_passthrough != Some(ignore) {
                 ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(ignore));
@@ -752,9 +1211,12 @@ impl BytePetApp {
             && cursor.y < pet_y + pet_size.y;
         let ignore = if inside {
             self.pet.as_ref().is_none_or(|pet| {
-                !pet.atlas
-                    .mask
-                    .opaque_at_cell(pet.last_sprite, cursor.x - pet_x, cursor.y - pet_y)
+                !pet.atlas.mask.opaque_at_cell_dilated(
+                    pet.last_sprite,
+                    cursor.x - pet_x,
+                    cursor.y - pet_y,
+                    1,
+                )
             })
         } else {
             true
@@ -916,7 +1378,9 @@ impl PetRuntime {
             tracing::warn!(pet = %entry.id, %warning, "pet atlas warning");
         }
         let frame = atlas.frame;
-        let engine = PetEngine::new(frame, &entry.manifest);
+        // `from_atlas` follows the frames this pet actually drew instead of the
+        // frame count of the reference sheet.
+        let engine = PetEngine::from_atlas(&atlas, &entry.manifest);
         Ok(Self {
             entry,
             atlas,
@@ -994,8 +1458,17 @@ impl PetRuntime {
 impl eframe::App for BytePetApp {
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         self.poll_tray(ctx);
+        self.poll_state_events(ctx);
+        self.update_pet_timers();
         self.update_auto_walk(ctx, frame);
+        self.update_glance(frame);
         self.update_passthrough(ctx, frame);
+        // `logic` also runs while the pet window is hidden or occluded, so the
+        // `GET /health` snapshot stays fresh even when nothing is painted.
+        if self.last_health_at.elapsed() >= Duration::from_secs(1) {
+            self.publish_health();
+            self.last_health_at = Instant::now();
+        }
         ctx.request_repaint_after(Duration::from_millis(100));
     }
 
@@ -1043,11 +1516,32 @@ impl eframe::App for BytePetApp {
         }
         self.poll_greeting();
 
-        let elapsed = self.last_tick.elapsed();
-        self.last_tick = Instant::now();
-        let _ = elapsed;
         ui.ctx().request_repaint_after(Duration::from_millis(16));
     }
+}
+
+/// Decode the idle frame of a pet into a texture for the settings preview.
+fn pet_preview_texture(ctx: &egui::Context, entry: &PetEntry) -> Option<egui::TextureHandle> {
+    let (atlas, warnings) = PetAtlas::open(&entry.dir, &entry.manifest).ok()?;
+    for warning in warnings {
+        tracing::debug!(pet = %entry.id, %warning, "preview atlas warning");
+    }
+    let frame = atlas.frame;
+    let mut pixels = Vec::with_capacity((frame.width * frame.height * 4) as usize);
+    for y in 0..frame.height {
+        for x in 0..frame.width {
+            pixels.extend_from_slice(&atlas.image.get_pixel(x, y).0);
+        }
+    }
+    let image = egui::ColorImage::from_rgba_unmultiplied(
+        [frame.width as usize, frame.height as usize],
+        &pixels,
+    );
+    Some(ctx.load_texture(
+        format!("pet-preview-{}", entry.id),
+        image,
+        egui::TextureOptions::NEAREST,
+    ))
 }
 
 fn tray_icon_rgba() -> Vec<u8> {
