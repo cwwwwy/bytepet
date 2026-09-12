@@ -99,6 +99,7 @@ pub struct BytePetApp {
     /// redraw the non-client frame, which showed up as a flashing border.
     applied_window_size: Option<egui::Vec2>,
     applied_always_on_top: Option<bool>,
+    #[cfg(target_os = "windows")]
     window_chrome_ready: bool,
     /// When the window was last resized; the Windows chrome is re-applied once
     /// the resize settles instead of on every step of a drag.
@@ -255,6 +256,7 @@ impl BytePetApp {
             pending_delete: None,
             applied_window_size: None,
             applied_always_on_top: None,
+            #[cfg(target_os = "windows")]
             window_chrome_ready: false,
             resize_settled_at: None,
             pet_icon: None,
@@ -2059,11 +2061,11 @@ impl eframe::App for BytePetApp {
         [0.0, 0.0, 0.0, 0.0]
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         #[cfg(target_os = "windows")]
         {
             use winit::platform::windows::{CornerPreference, WindowExtWindows as _};
-            if let Some(window) = frame.winit_window() {
+            if let Some(window) = _frame.winit_window() {
                 // Apply the chrome exactly once (and again after a resize):
                 // touching these attributes every frame made Windows repaint
                 // the non-client frame, which is the border that flashed.

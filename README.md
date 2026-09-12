@@ -36,6 +36,19 @@ cargo run -p bytepet-app
 The Windows MSVC target still requires the MSVC linker. Install Visual Studio
 Build Tools with the "Desktop development with C++" workload before building.
 
+## Verify
+
+Run all formatting, lint, test and release-linking gates from the repository root:
+
+```text
+macOS:  bash scripts/verify-macos.sh
+Windows: powershell -ExecutionPolicy Bypass -File scripts\verify-windows.ps1
+```
+
+For a double-click entry point, use `scripts/verify-macos.command` in Finder or
+`scripts\verify-windows.cmd` in Windows Explorer. Native window interactions
+still require the manual checks in `docs/MACOS_VERIFICATION.md`.
+
 ## Interactions
 
 | Input | Behaviour |

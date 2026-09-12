@@ -31,9 +31,6 @@ pub fn enable_transparency(window: &winit::window::Window) {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
-pub fn enable_transparency(_window: &winit::window::Window) {}
-
 /// Remove every classic frame style from a window.
 ///
 /// `decorations(false)` only hides the caption; the window still carries
@@ -77,9 +74,6 @@ pub fn strip_frame_styles(window: &winit::window::Window) {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
-pub fn strip_frame_styles(_window: &winit::window::Window) {}
-
 /// Keep a window from ever becoming the active window.
 ///
 /// Activating the pet window made Windows repaint its frame state (the flash
@@ -105,9 +99,6 @@ pub fn set_no_activate(window: &winit::window::Window) {
         }
     }
 }
-
-#[cfg(not(target_os = "windows"))]
-pub fn set_no_activate(_window: &winit::window::Window) {}
 
 /// Same as [`set_no_activate`] for a window identified by its title, used for
 /// the menus that are created on demand. Returns how many windows were changed.
@@ -300,6 +291,3 @@ pub fn clear_dwm_frame(window: &winit::window::Window) {
         );
     }
 }
-
-#[cfg(not(target_os = "windows"))]
-pub fn clear_dwm_frame(_window: &winit::window::Window) {}

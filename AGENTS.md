@@ -29,6 +29,17 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --check
 ```
 
+两端完整验证：
+
+```text
+macOS:  bash scripts/verify-macos.sh
+Windows: powershell -ExecutionPolicy Bypass -File scripts\verify-windows.ps1
+```
+
+也可以在 Finder 双击 `scripts/verify-macos.command`，或在 Windows 资源管理器双击
+`scripts\verify-windows.cmd`。脚本负责格式、Clippy、测试和 release 链接；窗口、托盘、菜单与
+点击穿透仍需按 `docs/MACOS_VERIFICATION.md` 或 Windows 实机操作检查。
+
 macOS 需要 Xcode Command Line Tools（`xcode-select --install`）和 Rust stable。
 
 Windows MSVC 目标需要 VS Build Tools（“使用 C++ 的桌面开发”）。如果 shell 里没有 `link.exe`
